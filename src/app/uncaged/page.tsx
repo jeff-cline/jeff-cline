@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 
-export default function UnchagedPage() {
+export default function UncagedPage() {
   const [isPlaying, setIsPlaying] = useState(false);
 
   return (
@@ -19,12 +19,12 @@ export default function UnchagedPage() {
       <section className="relative z-10 flex min-h-screen items-center justify-center px-6 py-12">
         <div className="mx-auto w-full max-w-4xl">
           <h1 className="mb-6 text-center text-3xl font-black uppercase tracking-[0.12em] text-orange-200 md:text-5xl">
-            Unchaged
+            Uncaged
           </h1>
 
           <div className="group relative overflow-hidden rounded-3xl border border-orange-300/40 bg-black/40 shadow-[0_0_60px_rgba(255,138,76,0.25)] backdrop-blur-sm">
             <Image
-              src="/unchaged/hero-coast.png"
+              src="/uncaged/hero-coast.png"
               alt="Coastal cliff with rainbow"
               width={1400}
               height={1800}
