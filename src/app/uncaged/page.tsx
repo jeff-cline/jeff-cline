@@ -119,7 +119,7 @@ export default function UncagedPage() {
 
           <audio
             ref={audioRef}
-            src="/decks/roatan-video.mp4"
+            src="/uncaged/uncaged.mp4"
             preload="auto"
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
