@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Meditations | Jeff Cline</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;color:#fff;font-family:Georgia,'Times New Roman',serif;min-height:100vh;overflow-x:hidden}
+canvas#bgCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.5s ease}
+canvas#bgCanvas.active{opacity:1;z-index:100}
+
+/* Float controls */
+.float-controls{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);z-index:200;display:none;align-items:center;gap:20px;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:60px;padding:16px 32px}
+.float-controls.active{display:flex}
+.float-controls .float-title{font-size:14px;color:#aaa;font-family:Inter,system-ui,sans-serif;white-space:nowrap}
+.float-controls .float-time{font-size:13px;color:#666;font-family:Inter,system-ui,sans-serif;min-width:40px;text-align:center}
+.float-progress{width:200px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;cursor:pointer}
+.float-progress-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#3b82f6);border-radius:2px;width:0;transition:width 0.1s}
+.float-pause{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#3b82f6);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.float-pause svg{width:18px;height:18px;fill:white}
+
+/* Mixer panel (centered overlay during fullscreen for track 3) */
+.float-mixer{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:201;display:none;flex-direction:column;gap:8px;background:rgba(0,0,0,0.8);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:24px 28px;width:380px;max-height:80vh;overflow-y:auto;transition:opacity 0.4s}
+.float-mixer.active{display:flex}
+.float-mixer.hidden-mixer{opacity:0;pointer-events:none}
+.float-mixer .mixer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.float-mixer .mixer-title{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#555;font-family:Inter,system-ui,sans-serif}
+.mixer-hide-btn{background:none;border:1px solid rgba(255,255,255,0.15);color:#888;font-size:11px;padding:4px 12px;border-radius:12px;cursor:pointer;font-family:Inter,system-ui,sans-serif;transition:all 0.3s}
+.mixer-hide-btn:hover{border-color:rgba(245,158,11,0.4);color:#f59e0b}
+.mixer-row{display:flex;align-items:center;gap:10px}
+.mixer-row .mixer-label{font-size:11px;color:#888;font-family:Inter,system-ui,sans-serif;min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mixer-row input[type=range]{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.1);border-radius:2px;outline:none;cursor:pointer}
+.mixer-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#f59e0b;cursor:pointer;border:2px solid rgba(0,0,0,0.5)}
+.mixer-row .mixer-val{font-size:10px;color:#666;font-family:Inter,system-ui,sans-serif;min-width:24px;text-align:right}
+
+/* Show mixer button (visible when mixer is hidden) */
+.mixer-show-btn{position:fixed;top:30px;left:50%;transform:translateX(-50%);z-index:202;display:none;background:rgba(0,0,0,0.6);backdrop-filter:blur(10px);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;font-size:12px;padding:8px 20px;border-radius:20px;cursor:pointer;font-family:Inter,system-ui,sans-serif;transition:all 0.3s}
+.mixer-show-btn:hover{background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.5)}
+.mixer-show-btn.active{display:block}
+
+/* Page content */
+.page-content{position:relative;z-index:1;transition:opacity 0.8s ease}
+.page-content.hidden{opacity:0;pointer-events:none}
+.container{max-width:800px;margin:0 auto;padding:40px 24px}
+.hero{text-align:center;padding:80px 0 40px}
+.hero .tag{font-size:12px;letter-spacing:0.3em;text-transform:uppercase;color:#666;margin-bottom:16px;font-family:Inter,system-ui,sans-serif}
+.hero h1{font-size:48px;font-weight:700;margin-bottom:16px}
+.hero .subtitle{font-size:18px;color:#888;max-width:500px;margin:0 auto 32px;line-height:1.6}
+.modalities{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:600px;margin:0 auto 16px;text-align:left}
+.modality{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#777;font-family:Inter,system-ui,sans-serif;line-height:1.5}
+.modality .icon{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(59,130,246,0.3));display:flex;align-items:center;justify-content:center;margin-top:2px}
+.modality .icon span{font-size:9px;color:#a78bfa}
+.modality strong{color:#aaa}
+.headphones-note{text-align:center;font-size:12px;color:#555;font-family:Inter,system-ui,sans-serif;margin-top:20px;font-style:italic}
+.section-label{font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#555;font-family:Inter,system-ui,sans-serif;margin:48px 0 16px;padding-left:4px}
+
+/* Mode toggle */
+.mode-toggle{display:flex;align-items:center;gap:0;margin-bottom:20px;font-family:Inter,system-ui,sans-serif}
+.mode-btn{padding:8px 16px;font-size:12px;letter-spacing:0.05em;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#666;cursor:pointer;transition:all 0.3s;font-family:Inter,system-ui,sans-serif}
+.mode-btn:first-child{border-radius:20px 0 0 20px}
+.mode-btn:last-child{border-radius:0 20px 20px 0;border-left:none}
+.mode-btn.active{background:rgba(124,58,237,0.2);color:#a78bfa;border-color:rgba(124,58,237,0.4)}
+
+/* Cards */
+.card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px;margin-bottom:24px;transition:all 0.4s}
+.card:hover{border-color:rgba(147,51,234,0.3)}
+.player-row{display:flex;align-items:flex-start;gap:24px}
+.play-btn{flex-shrink:0;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#3b82f6);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s}
+.play-btn:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(124,58,237,0.3)}
+.play-btn svg{width:24px;height:24px;fill:white;margin-left:3px}
+.play-btn.playing svg{margin-left:0}
+.play-btn.fire{background:linear-gradient(135deg,#dc2626,#f97316)}
+.play-btn.fire:hover{box-shadow:0 0 30px rgba(249,115,22,0.4)}
+.play-btn.gold{background:linear-gradient(135deg,#d97706,#f59e0b)}
+.play-btn.gold:hover{box-shadow:0 0 30px rgba(245,158,11,0.4)}
+.info{flex:1}
+.info h2{font-size:22px;font-weight:700;margin-bottom:6px}
+.info .desc{font-size:14px;color:#888;line-height:1.6;margin-bottom:16px;font-family:Inter,system-ui,sans-serif}
+.progress-bar{width:100%;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;cursor:pointer;margin-bottom:4px}
+.progress-fill{height:100%;border-radius:3px;width:0;transition:width 0.1s}
+.progress-fill.purple{background:linear-gradient(90deg,#7c3aed,#3b82f6)}
+.progress-fill.fire{background:linear-gradient(90deg,#dc2626,#f97316)}
+.progress-fill.gold{background:linear-gradient(90deg,#d97706,#f59e0b)}
+.time-row{display:flex;justify-content:space-between;font-size:12px;color:#555;font-family:Inter,system-ui,sans-serif;margin-bottom:16px}
+.layers-title{font-size:11px;text-transform:uppercase;letter-spacing:0.15em;color:#555;margin-bottom:8px;font-family:Inter,system-ui,sans-serif}
+.layers{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.layer{display:flex;align-items:center;gap:8px;font-size:13px;color:#888;font-family:Inter,system-ui,sans-serif}
+.layer .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.dot-purple{background:rgba(124,58,237,0.5)}.dot-blue{background:rgba(59,130,246,0.5)}.dot-orange{background:rgba(249,115,22,0.5)}.dot-teal{background:rgba(20,184,166,0.5)}.dot-red{background:rgba(239,68,68,0.5)}.dot-gold{background:rgba(245,158,11,0.5)}
+.note{font-size:12px;color:#555;font-style:italic;margin-top:12px;font-family:Inter,system-ui,sans-serif}
+.dl-link{display:inline-flex;align-items:center;gap:8px;margin-top:16px;font-size:14px;color:#7c3aed;text-decoration:none;font-family:Inter,system-ui,sans-serif;transition:color 0.3s}
+.dl-link:hover{color:#a78bfa}
+.dl-link.fire{color:#f97316}.dl-link.fire:hover{color:#fb923c}
+.dl-link.gold{color:#f59e0b}.dl-link.gold:hover{color:#fbbf24}
+.back{display:inline-block;margin-bottom:24px;color:#555;text-decoration:none;font-size:14px;font-family:Inter,system-ui,sans-serif}
+.back:hover{color:#7c3aed}
+.badge{display:inline-block;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;padding:3px 10px;border-radius:12px;font-family:Inter,system-ui,sans-serif;margin-left:12px;position:relative;top:-2px}
+.badge-live{background:rgba(124,58,237,0.2);color:#a78bfa;border:1px solid rgba(124,58,237,0.3)}
+.badge-fire{background:rgba(249,115,22,0.2);color:#f97316;border:1px solid rgba(249,115,22,0.3)}
+.badge-gold{background:rgba(245,158,11,0.2);color:#f59e0b;border:1px solid rgba(245,158,11,0.3)}
+
+/* On/Off toggle switches for Power 444 */
+.toggle-row{display:flex;align-items:center;gap:8px;padding:6px 0}
+.toggle-row .toggle-label{font-size:12px;color:#aaa;font-family:Inter,system-ui,sans-serif;min-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toggle-row .toggle-label.off{color:#555}
+.toggle-row input[type=range]{flex:1;height:3px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.1);border-radius:2px;outline:none;cursor:pointer;min-width:60px}
+.toggle-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#34d399;cursor:pointer;border:2px solid rgba(0,0,0,0.5)}
+.toggle-row input[type=range].disabled-slider{opacity:0.3;pointer-events:none}
+.toggle-row input[type=range].disabled-slider::-webkit-slider-thumb{background:#555}
+.toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.1);border-radius:24px;transition:0.3s}
+.toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#555;border-radius:50%;transition:0.3s}
+.toggle-switch input:checked+.toggle-slider{background:rgba(16,185,129,0.5)}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(20px);background:#34d399}
+
+/* Inline mixer (in-card for track 3) */
+.inline-mixer{margin-top:16px;padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px}
+.inline-mixer .mixer-title{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#555;font-family:Inter,system-ui,sans-serif;margin-bottom:10px}
+.inline-mixer .mixer-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px}
+.inline-mixer .mixer-row{display:flex;align-items:center;gap:6px}
+.inline-mixer .mixer-label{font-size:11px;color:#888;font-family:Inter,system-ui,sans-serif;min-width:60px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inline-mixer input[type=range]{flex:1;height:3px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.1);border-radius:2px;outline:none;cursor:pointer}
+.inline-mixer input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#f59e0b;cursor:pointer;border:2px solid rgba(0,0,0,0.5)}
+
+/* Customize link under each track */
+.customize-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;margin-left:16px;font-size:13px;color:#a78bfa;text-decoration:none;font-family:Inter,system-ui,sans-serif;transition:color 0.3s}
+.customize-link:hover{color:#c4b5fd}
+.customize-link svg{width:14px;height:14px}
+
+/* Custom meditation request section */
+.custom-section{margin-top:64px;padding:48px 0;border-top:1px solid rgba(255,255,255,0.06)}
+.custom-section .section-heading{text-align:center;margin-bottom:40px}
+.custom-section .section-heading h2{font-size:32px;font-weight:700;margin-bottom:12px}
+.custom-section .section-heading p{font-size:16px;color:#888;font-family:Inter,system-ui,sans-serif;max-width:560px;margin:0 auto;line-height:1.6}
+.custom-form{background:rgba(255,255,255,0.04);border:1px solid rgba(124,58,237,0.2);border-radius:20px;padding:40px;max-width:600px;margin:0 auto}
+.custom-form .form-title{font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#a78bfa;font-family:Inter,system-ui,sans-serif;margin-bottom:24px;text-align:center}
+.custom-form .form-row{margin-bottom:16px}
+.custom-form label{display:block;font-size:12px;color:#888;font-family:Inter,system-ui,sans-serif;margin-bottom:6px}
+.custom-form input,.custom-form textarea{width:100%;padding:12px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:14px;font-family:Inter,system-ui,sans-serif;outline:none;transition:border-color 0.3s}
+.custom-form input:focus,.custom-form textarea:focus{border-color:rgba(124,58,237,0.5)}
+.custom-form textarea{min-height:120px;resize:vertical}
+.custom-form .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.custom-form .submit-btn{width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#3b82f6);border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:600;font-family:Inter,system-ui,sans-serif;cursor:pointer;transition:all 0.3s;margin-top:8px}
+.custom-form .submit-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(124,58,237,0.3)}
+.custom-form .submit-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
+.custom-form .form-desc{font-size:13px;color:#666;font-family:Inter,system-ui,sans-serif;text-align:center;margin-bottom:20px;line-height:1.5}
+.custom-form .thank-you{text-align:center;padding:40px 20px}
+.custom-form .thank-you h3{font-size:24px;margin-bottom:12px;color:#a78bfa}
+.custom-form .thank-you p{font-size:14px;color:#888;font-family:Inter,system-ui,sans-serif;margin-bottom:20px;line-height:1.6}
+.custom-form .thank-you a{color:#7c3aed;text-decoration:none;font-family:Inter,system-ui,sans-serif;font-size:14px}
+.custom-form .thank-you a:hover{color:#a78bfa}
+
+/* Custom CTA button */
+.custom-cta{text-align:center;margin-top:48px}
+.custom-cta a{display:inline-block;padding:16px 40px;background:linear-gradient(135deg,#7c3aed,#3b82f6);border-radius:30px;color:#fff;font-size:16px;font-weight:600;text-decoration:none;font-family:Inter,system-ui,sans-serif;transition:all 0.3s;border:1px solid rgba(124,58,237,0.3)}
+.custom-cta a:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(124,58,237,0.35)}
+
+.footer-jc{text-align:center;padding:60px 0 20px}
+.footer-jc a{font-size:6px;color:rgba(255,255,255,0.08);text-decoration:none;font-family:Inter,system-ui,sans-serif}
+.footer-jc a:hover{color:rgba(255,255,255,0.2)}
+
+@media(max-width:640px){
+  .hero h1{font-size:32px}
+  .player-row{flex-direction:column;align-items:center;text-align:center}
+  .layers{grid-template-columns:1fr}
+  .modalities{grid-template-columns:1fr}
+  .float-controls{padding:12px 20px;gap:12px;bottom:20px}
+  .float-progress{width:120px}
+  .float-controls .float-title{display:none}
+  .float-mixer{width:90vw;max-width:340px;padding:18px 16px}
+  .inline-mixer .mixer-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<div class="float-controls" id="floatControls">
+  <button class="float-pause" id="floatPause" onclick="floatToggle()">
+    <svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+  </button>
+  <span class="float-title" id="floatTitle">-</span>
+  <span class="float-time" id="floatTime">0:00</span>
+  <div class="float-progress" id="floatProgressBar" onclick="floatSeek(event)">
+    <div class="float-progress-fill" id="floatProgress"></div>
+  </div>
+  <span class="float-time" id="floatDuration">7:00</span>
+</div>
+
+<!-- Floating mixer for track 3 in fullscreen -->
+<div class="float-mixer" id="floatMixer"></div>
+<button class="mixer-show-btn" id="mixerShowBtn" onclick="toggleMixerVisibility(true)">Show Mixer</button>
+
+<div class="page-content" id="pageContent">
+<div class="container">
+<a href="/" class="back">&larr; Back to Jeff Cline</a>
+
+<div class="hero">
+<p class="tag">Frequency &middot; Vibration &middot; Stillness</p>
+<h1>Meditations</h1>
+<p class="subtitle">Original frequency compositions engineered for deep meditative states, ceremony preparation, and somatic release.</p>
+<div class="modalities">
+<div class="modality"><div class="icon"><span>&#9672;</span></div><div><strong>9D Multi-Dimensional Sound</strong><br>360-degree spatial audio designed to engage the full brain</div></div>
+<div class="modality"><div class="icon"><span>&#9672;</span></div><div><strong>Binaural Brain Entrainment</strong><br>Frequencies that alter brainwave patterns into theta and alpha states</div></div>
+<div class="modality"><div class="icon"><span>&#9672;</span></div><div><strong>Solfeggio Frequencies</strong><br>Ancient tones (417Hz, 432Hz, 528Hz) that promote emotional release</div></div>
+<div class="modality"><div class="icon"><span>&#9672;</span></div><div><strong>Isochronic Brainwave Tones</strong><br>Rhythmic pulses that synchronize brainwave activity without headphones</div></div>
+<div class="modality"><div class="icon"><span>&#9672;</span></div><div><strong>432Hz Harmonic Tuning</strong><br>Natural tuning frequency associated with deep relaxation and coherence</div></div>
+<div class="modality"><div class="icon"><span>&#9672;</span></div><div><strong>Somatic Breathwork</strong><br>Body-centered breathing patterns that unlock physical tension</div></div>
+<div class="modality"><div class="icon"><span>&#9672;</span></div><div><strong>Subliminal Hypnotic Therapy</strong><br>Subtle layered messaging designed to affect the subconscious mind</div></div>
+<div class="modality"><div class="icon"><span>&#9672;</span></div><div><strong>Ceremony-Grade Audio</strong><br>Tribal chanting, ocean force, and sacred drum patterns for ritual work</div></div>
+</div>
+<p class="headphones-note">Best experienced with headphones in a quiet, dark space.</p>
+</div>
+
+<p class="section-label">Compositions</p>
+
+<div class="mode-toggle">
+<button class="mode-btn active" id="modeHeadphones" onclick="setMode('headphones')">&#127911; Headphones</button>
+<button class="mode-btn" id="modeSpeaker" onclick="setMode('speaker')">&#128266; Speaker</button>
+</div>
+
+<!-- TRACK 1: Deep State -->
+<div class="card" id="card1">
+<div class="player-row">
+<button class="play-btn" id="playBtn1" onclick="startTrack(1)">
+<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+</button>
+<div class="info">
+<h2>Bufo Ceremony &mdash; Deep State <span class="badge badge-live">Live</span></h2>
+<p class="desc">Ocean waves, Solfeggio singing bowls (528Hz, 432Hz, 417Hz, 396Hz), Om drone (136.1Hz), heartbeat drums at 60bpm, and theta/alpha binaural beats.</p>
+<div class="progress-bar" id="progressBar1" onclick="seekTrack(event,1)">
+<div class="progress-fill purple" id="progress1"></div>
+</div>
+<div class="time-row"><span id="time1">0:00</span><span>7:00</span></div>
+<p class="layers-title">Frequency Layers</p>
+<div class="layers">
+<div class="layer"><span class="dot dot-teal"></span>Ocean waves (pink noise)</div>
+<div class="layer"><span class="dot dot-purple"></span>528Hz Solfeggio</div>
+<div class="layer"><span class="dot dot-purple"></span>432Hz harmonic tuning</div>
+<div class="layer"><span class="dot dot-orange"></span>417Hz Solfeggio</div>
+<div class="layer"><span class="dot dot-purple"></span>396Hz Solfeggio</div>
+<div class="layer"><span class="dot dot-blue"></span>136.1Hz Om drone</div>
+<div class="layer"><span class="dot dot-red"></span>60bpm heartbeat drums</div>
+<div class="layer"><span class="dot dot-blue"></span>Theta + Alpha binaural</div>
+</div>
+<p class="note" id="note1">Headphones required for binaural entrainment.</p>
+<a href="/audio/meditations/bufo-ceremony-deep-state.mp3" download class="dl-link" id="dl1">
+<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+Download 320kbps MP3</a>
+<a href="#custom-request" class="customize-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Request a Custom Version</a>
+</div></div></div>
+
+<!-- TRACK 2: Tribal Fire -->
+<div class="card" id="card2">
+<div class="player-row">
+<button class="play-btn fire" id="playBtn2" onclick="startTrack(2)">
+<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+</button>
+<div class="info">
+<h2>Bufo Ceremony &mdash; Tribal Fire <span class="badge badge-fire">New</span></h2>
+<p class="desc">Tribal bufo chanting, waves crashing hard against rocks, deep ceremonial drums, 417Hz sacral frequency, isochronic brainwave tones, subliminal hypnotic layers. Raw and primal.</p>
+<div class="progress-bar" id="progressBar2" onclick="seekTrack(event,2)">
+<div class="progress-fill fire" id="progress2"></div>
+</div>
+<div class="time-row"><span id="time2">0:00</span><span>7:00</span></div>
+<p class="layers-title">Frequency Layers</p>
+<div class="layers">
+<div class="layer"><span class="dot dot-teal"></span>Heavy crashing waves</div>
+<div class="layer"><span class="dot dot-orange"></span>Tribal bufo chanting</div>
+<div class="layer"><span class="dot dot-red"></span>Ceremonial drums</div>
+<div class="layer"><span class="dot dot-orange"></span>417Hz sacral</div>
+<div class="layer"><span class="dot dot-purple"></span>432Hz + 528Hz bed</div>
+<div class="layer"><span class="dot dot-blue"></span>Isochronic theta</div>
+<div class="layer"><span class="dot dot-purple"></span>Subliminal hypnotic</div>
+<div class="layer"><span class="dot dot-blue"></span>Binaural entrainment</div>
+</div>
+<p class="note" id="note2">Volume auto-curves: 30% &rarr; 40% &rarr; 50% &rarr; fade to silence.</p>
+<a href="/audio/meditations/bufo-ceremony-tribal-fire.mp3" download class="dl-link fire" id="dl2">
+<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+Download 320kbps MP3</a>
+<a href="#custom-request" class="customize-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Request a Custom Version</a>
+</div></div></div>
+
+<!-- TRACK 3: Beach Ceremony 444 (Interactive Mixer) -->
+<div class="card" id="card3" style="border-color:rgba(245,158,11,0.15)">
+<div class="player-row">
+<button class="play-btn gold" id="playBtn3" onclick="startTrack(3)">
+<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+</button>
+<div class="info">
+<h2>Beach Ceremony 444 <span class="badge badge-gold">Interactive</span></h2>
+<p class="desc">Full ceremony mix with drums and chimes pushed above the waves. Real-time Web Audio &mdash; adjust every layer live with the mixer below. Black-to-red-to-orange visual cycle.</p>
+<div class="progress-bar" id="progressBar3" onclick="seekTrack(event,3)">
+<div class="progress-fill gold" id="progress3"></div>
+</div>
+<div class="time-row"><span id="time3">0:00</span><span>7:00</span></div>
+<p class="layers-title">Frequency Layers (adjustable)</p>
+<div class="layers">
+<div class="layer"><span class="dot dot-teal"></span>Ocean waves</div>
+<div class="layer"><span class="dot dot-red"></span>Ceremonial drums</div>
+<div class="layer"><span class="dot dot-gold"></span>528Hz chime</div>
+<div class="layer"><span class="dot dot-gold"></span>432Hz chime</div>
+<div class="layer"><span class="dot dot-orange"></span>417Hz chime</div>
+<div class="layer"><span class="dot dot-gold"></span>396Hz chime</div>
+<div class="layer"><span class="dot dot-blue"></span>136.1Hz Om drone</div>
+<div class="layer"><span class="dot dot-orange"></span>Tribal chanting</div>
+<div class="layer"><span class="dot dot-blue"></span>Isochronic theta</div>
+<div class="layer"><span class="dot dot-blue"></span>Monaural beats</div>
+</div>
+
+<!-- Inline mixer -->
+<div class="inline-mixer" id="inlineMixer">
+<p class="mixer-title">Live Mixer &mdash; drag to adjust each layer</p>
+<div class="mixer-grid" id="mixerGrid">
+<!-- Populated by JS -->
+</div>
+</div>
+
+<p class="note">Speaker-friendly. Volume auto-curves: 30% &rarr; 50% &rarr; fade to silence. Mixer adjustments apply in real-time.</p>
+<p class="note" style="margin-top:6px"><a href="#" onclick="startTrack3Fallback();return false;" style="color:#f59e0b;text-decoration:underline;font-style:normal">No sound? Tap here to play the pre-mixed MP3 instead</a></p>
+<a href="/audio/meditations/beach-ceremony-444.mp3" download class="dl-link gold" id="dl3">
+<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+Download Pre-mixed 320kbps MP3</a>
+<a href="#custom-request" class="customize-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Request a Custom Version</a>
+</div></div></div>
+
+<!-- TRACK 4: Power 444 (Multi-track Audio, seekable, iOS-friendly) -->
+<div class="card" id="card4" style="border-color:rgba(16,185,129,0.15)">
+<div class="player-row">
+<button class="play-btn" id="playBtn4" onclick="startTrack(4)" style="background:linear-gradient(135deg,#059669,#10b981)">
+<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+</button>
+<div class="info">
+<h2>Power Ceremony 444 <span class="badge" style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.3)">New</span></h2>
+<p class="desc">Realistic ceremony audio. Individual drum HITS you can feel, singing bowls that ring and shimmer, tribal chanting that comes and goes, ocean with hard crashes, mist spray. Each layer is a separate audio track &mdash; seekable, adjustable, works on speakers and headphones.</p>
+<div class="progress-bar" id="progressBar4" onclick="seekTrack(event,4)">
+<div class="progress-fill" id="progress4" style="background:linear-gradient(90deg,#059669,#10b981)"></div>
+</div>
+<div class="time-row"><span id="time4">0:00</span><span>7:00</span></div>
+<p class="layers-title">Ceremony Layers (adjustable)</p>
+<div class="layers">
+<div class="layer"><span class="dot dot-teal"></span>Ocean waves + crashes</div>
+<div class="layer"><span class="dot dot-teal"></span>Mist spray</div>
+<div class="layer"><span class="dot dot-red"></span>Ceremony drums (percussive)</div>
+<div class="layer"><span class="dot dot-gold"></span>Singing bowls (struck)</div>
+<div class="layer"><span class="dot dot-orange"></span>Tribal chanting (periodic)</div>
+<div class="layer"><span class="dot dot-purple"></span>Solfeggio (417/432/528)</div>
+<div class="layer"><span class="dot dot-blue"></span>136Hz Om drone</div>
+<div class="layer"><span class="dot dot-blue"></span>Monaural + Isochronic</div>
+</div>
+
+<div class="inline-mixer" id="inlineMixer4">
+<p class="mixer-title">Live Mixer &mdash; drag to adjust each layer</p>
+<div class="mixer-grid" id="mixerGrid4"></div>
+</div>
+
+<p class="note">Seekable &mdash; tap the progress bar to jump anywhere. Volume builds and fades over 7 minutes.</p>
+<a href="/audio/meditations/cave444/cave-ceremony-444.mp3" download class="dl-link" id="dl4" style="color:#10b981">
+<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+Download Pre-mixed 320kbps MP3</a>
+<a href="#custom-request" class="customize-link"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Request a Custom Version</a>
+</div></div></div>
+
+<!-- Meditation Maker CTA -->
+<div class="custom-cta" style="margin-bottom:32px">
+<a href="/meditation-maker" style="background:linear-gradient(135deg,#059669,#10b981)">Create Your Own Meditation</a>
+</div>
+
+<!-- Community Meditations -->
+<div class="custom-section" style="border-top:1px solid rgba(255,255,255,0.06);padding-top:48px;margin-top:32px">
+<div class="section-heading" style="text-align:center;margin-bottom:24px">
+<h2 style="font-size:28px;margin-bottom:8px">Community Meditations</h2>
+<p style="font-size:14px;color:#888;font-family:Inter,system-ui,sans-serif;max-width:480px;margin:0 auto;line-height:1.6">Meditations created by the community using the Meditation Maker. <a href="/meditation-maker" style="color:#10b981;text-decoration:none">Create yours &rarr;</a></p>
+</div>
+<div id="communityList" style="text-align:center;padding:20px">
+<p style="font-size:13px;color:#555;font-family:Inter,system-ui,sans-serif;font-style:italic">Community meditations coming soon. <a href="/meditation-maker" style="color:#a78bfa;text-decoration:none">Be the first to create one.</a></p>
+</div>
+</div>
+
+<!-- Custom Meditation CTA -->
+<div class="custom-cta">
+<a href="#custom-request">Want a Custom Meditation Mix?</a>
+</div>
+
+<!-- Custom Meditation Request Form -->
+<div class="custom-section" id="custom-request">
+<div class="section-heading">
+<h2>Request a Custom Meditation</h2>
+<p>Tell us about your ideal meditation experience. We'll engineer a custom frequency composition tailored to your specific goals, intentions, and requirements.</p>
+</div>
+<div class="custom-form" id="customForm">
+<p class="form-title">Custom Mix Request</p>
+<p class="form-desc">Describe what you're looking for &mdash; whether it's ceremony prep, sleep, focus, somatic release, or something entirely unique. We'll build it for you.</p>
+<div id="formFields">
+<div class="form-grid">
+<div class="form-row"><label>Name *</label><input type="text" id="cfName" required placeholder="Your name"></div>
+<div class="form-row"><label>Phone *</label><input type="tel" id="cfPhone" required placeholder="(555) 123-4567"></div>
+</div>
+<div class="form-grid">
+<div class="form-row"><label>Email *</label><input type="email" id="cfEmail" required placeholder="you@email.com"></div>
+<div class="form-row"><label>Website</label><input type="url" id="cfWebsite" placeholder="https://yoursite.com"></div>
+</div>
+<div class="form-row">
+<label>What are your names, goals, requirements, or intentions? *</label>
+<textarea id="cfComments" required placeholder="Tell us about your ideal meditation experience. What frequencies, sounds, or states are you drawn to? Is this for personal use, ceremony, a retreat, a brand, or something else?"></textarea>
+</div>
+<button class="submit-btn" id="cfSubmit" onclick="submitCustomForm()">Submit Request</button>
+</div>
+<div class="thank-you" id="thankYou" style="display:none">
+<h3>Thank You for Your Interest</h3>
+<p>Someone will contact you shortly to discuss your custom meditation mix.</p>
+<a href="/meditations">&larr; Back to Meditations</a>
+</div>
+</div>
+</div>
+
+<div class="footer-jc"><a href="https://jeff-cline.com">JC</a></div>
+</div>
+</div>
+
+<!-- Audio elements -->
+<audio id="audio1" src="/audio/meditations/bufo-ceremony-deep-state.mp3" preload="metadata"></audio>
+<audio id="audio2" src="/audio/meditations/bufo-ceremony-tribal-fire.mp3" preload="metadata"></audio>
+<audio id="audio3" src="/audio/meditations/beach-ceremony-444.mp3" preload="none"></audio>
+
+<!-- Power 444: separate audio element per layer -->
+<audio id="cave-ocean-base" src="/audio/meditations/cave444/ocean-base.mp3" preload="none"></audio>
+<audio id="cave-ocean-crash" src="/audio/meditations/cave444/ocean-crash.mp3" preload="none"></audio>
+<audio id="cave-mist" src="/audio/meditations/cave444/mist.mp3" preload="none"></audio>
+<audio id="cave-drums" src="/audio/meditations/cave444/drums.mp3" preload="none"></audio>
+<audio id="cave-bowls" src="/audio/meditations/cave444/bowls.mp3" preload="none"></audio>
+<audio id="cave-chanting" src="/audio/meditations/cave444/chanting.mp3" preload="none"></audio>
+<audio id="cave-solfeggio" src="/audio/meditations/cave444/solfeggio.mp3" preload="none"></audio>
+<audio id="cave-om" src="/audio/meditations/cave444/om.mp3" preload="none"></audio>
+<audio id="cave-mono4" src="/audio/meditations/cave444/mono4.mp3" preload="none"></audio>
+<audio id="cave-mono7" src="/audio/meditations/cave444/mono7.mp3" preload="none"></audio>
+<audio id="cave-iso" src="/audio/meditations/cave444/iso.mp3" preload="none"></audio>
+
+<script>
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+const canvas = document.getElementById('bgCanvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let animActive = false;
+let animFrame = null;
+let intensity = 0;
+let currentTrack = 0;
+let visualMode = 'none'; // 'ocean', 'fire', 'beach444'
+let audioMode = 'headphones';
+let frameCount = 0;
+let beach444ctx = null; // Web Audio context for track 3
+let beach444nodes = {};
+let beach444playing = false;
+let beach444startTime = 0;
+let beach444elapsed = 0;
+let masterVolume = 1.0;
+let iosAudioUnlocked = false;
+
+// Visual speed multipliers -- defaults set after DEF_SPEED is defined
+let visualSpeedRed = 0.18;
+let visualSpeedOrange = 0.18;
+let visualSpeedTeal = 0.90;
+
+// iOS Audio Unlock: Safari requires audio to be started from a direct user gesture
+// We create a shared AudioContext early and unlock it on first touch/click
+let sharedAudioCtx = null;
+function unlockiOSAudio() {
+  if (iosAudioUnlocked) return;
+  try {
+    if (!sharedAudioCtx) sharedAudioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+    // Play a silent buffer to fully unlock audio on iOS
+    const buf = sharedAudioCtx.createBuffer(1, 1, 22050);
+    const src = sharedAudioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(sharedAudioCtx.destination);
+    src.start(0);
+    // Also unlock HTML5 audio for tracks 1 & 2
+    const silentPlay = document.getElementById('audio1');
+    if (silentPlay) { silentPlay.volume = 0; silentPlay.play().then(()=>{silentPlay.pause();silentPlay.volume=1;silentPlay.currentTime=0;}).catch(()=>{}); }
+    iosAudioUnlocked = true;
+    console.log('iOS audio unlocked');
+  } catch(e) { console.log('iOS unlock error:', e); }
+}
+// Listen for first user interaction
+document.addEventListener('touchstart', unlockiOSAudio, {once:true});
+document.addEventListener('touchend', unlockiOSAudio, {once:true});
+document.addEventListener('click', unlockiOSAudio, {once:true});
+
+const audioSources = {
+  headphones: { 1: '/audio/meditations/bufo-ceremony-deep-state.mp3', 2: '/audio/meditations/bufo-ceremony-tribal-fire.mp3' },
+  speaker: { 1: '/audio/meditations/bufo-ceremony-deep-state-speaker.mp3', 2: '/audio/meditations/bufo-ceremony-tribal-fire-speaker.mp3' }
+};
+
+function setMode(mode) {
+  if (currentTrack > 0 && currentTrack <= 2) stopAllAudio();
+  audioMode = mode;
+  document.getElementById('modeHeadphones').classList.toggle('active', mode === 'headphones');
+  document.getElementById('modeSpeaker').classList.toggle('active', mode === 'speaker');
+  for (let i = 1; i <= 2; i++) {
+    const a = document.getElementById('audio' + i);
+    a.src = audioSources[mode][i]; a.load();
+  }
+  document.getElementById('dl1').href = audioSources[mode][1];
+  document.getElementById('dl2').href = audioSources[mode][2];
+  document.getElementById('note1').textContent = mode === 'speaker'
+    ? 'Speaker-optimized: monaural beats + isochronic tones.'
+    : 'Headphones required for binaural entrainment.';
+}
+
+// ══════════════════════════════════════════
+// CANVAS
+// ══════════════════════════════════════════
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+class Particle {
+  constructor(mode) { this.mode = mode; this.reset(); }
+  reset() {
+    this.x = Math.random() * canvas.width;
+    this.y = this.mode === 'fire' ? canvas.height + Math.random()*100 : Math.random() * canvas.height;
+    this.size = Math.random()*4+1; this.baseSize = this.size;
+    const palettes = {
+      ocean: [[0,200,220],[20,100,200],[0,220,210],[60,40,200],[124,58,237]],
+      fire: [[220,30,0],[180,10,0],[255,60,0],[140,0,0],[255,100,10],[200,40,0],[0,180,170],[0,200,190],[20,140,140]],
+      beach444: [[200,30,0],[160,10,0],[230,80,0],[180,50,0],[255,120,20],[120,0,0],[200,60,0],[255,80,0],[100,0,0],[40,0,0],[0,190,180],[0,210,200],[20,160,155],[0,230,210],[10,140,135]]
+    };
+    const p = palettes[this.mode] || palettes.ocean;
+    this.color = p[Math.floor(Math.random()*p.length)];
+    // Classify color group for independent speed control
+    const r=this.color[0], g=this.color[1], b=this.color[2];
+    if (g > 100 && b > 100) this.colorGroup = 'teal';
+    else if (g > 40 || (r > 200 && g > 30)) this.colorGroup = 'orange';
+    else this.colorGroup = 'red';
+    this.alpha = Math.random()*(this.mode==='ocean'?0.4:0.6)+(this.mode==='ocean'?0.05:0.1);
+    this.baseAlpha = this.alpha;
+    this.vy = this.mode==='fire'||this.mode==='beach444' ? -(Math.random()*2.5+0.5) : (Math.random()-0.5)*1.5;
+    this.vx = (Math.random()-0.5)*2;
+    this.angle = Math.random()*Math.PI*2;
+    this.angleSpeed = (Math.random()-0.5)*0.04;
+    this.orbitRadius = Math.random()*100+30;
+    this.originX = this.x; this.originY = this.y;
+    this.life = Math.random()*200+80; this.maxLife = this.life;
+    this.flickerSpeed = Math.random()*0.1+0.02;
+    this.flickerOff = Math.random()*Math.PI*2;
+    this.pulseSpeed = Math.random()*0.04+0.01; // breathing pulse speed
+    this.pulseOff = Math.random()*Math.PI*2;
+  }
+  update(t) {
+    // Get per-color-group speed multiplier (only for fire/beach444 modes)
+    let spd = 1.0;
+    if (this.mode==='fire'||this.mode==='beach444') {
+      if (this.colorGroup==='red') spd = visualSpeedRed;
+      else if (this.colorGroup==='orange') spd = visualSpeedOrange;
+      else if (this.colorGroup==='teal') spd = visualSpeedTeal;
+    }
+    const sw = intensity*2.5+0.3;
+    this.angle += this.angleSpeed*(1+intensity*3)*spd;
+    // Size pulsing (breathing - get smaller and larger)
+    const pulse = Math.sin(t*this.pulseSpeed*spd+this.pulseOff)*0.4+0.8;
+    if (this.mode==='fire'||this.mode==='beach444') {
+      this.x = this.originX+Math.cos(this.angle)*this.orbitRadius*sw;
+      this.y = this.originY+Math.sin(this.angle*0.5)*(this.orbitRadius*0.3);
+      this.originX += this.vx*(0.8+intensity*1.5)*spd;
+      this.originY += this.vy*(0.8+intensity*1.2)*spd;
+      const fl = Math.sin(t*this.flickerSpeed*spd+this.flickerOff)*0.3+0.7;
+      this.size = this.baseSize*(1+intensity*4)*fl*pulse;
+      this.alpha = this.baseAlpha*(1+intensity*2.5)*fl;
+    } else {
+      this.x = this.originX+Math.cos(this.angle)*this.orbitRadius*sw;
+      this.y = this.originY+Math.sin(this.angle)*this.orbitRadius*sw;
+      this.originX += this.vx*(0.5+intensity);
+      this.originY += this.vy*(0.5+intensity);
+      this.size = this.baseSize*(1+intensity*3)*pulse;
+      this.alpha = this.baseAlpha*(1+intensity*2);
+    }
+    this.life -= spd; // slower particles live longer
+    if (this.life<=0||this.x<-80||this.x>canvas.width+80||this.y<-200||this.y>canvas.height+100) this.reset();
+  }
+  draw(t) {
+    const fade = Math.min(1, this.life/(this.maxLife*0.2));
+    const a = Math.min(1, this.alpha*fade);
+    ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+    ctx.fillStyle = `rgba(${this.color[0]},${this.color[1]},${this.color[2]},${a})`; ctx.fill();
+    if (this.size>2 && intensity>0.2) {
+      const gs = (this.mode==='fire'||this.mode==='beach444') ? this.size*5 : this.size*3;
+      ctx.beginPath(); ctx.arc(this.x,this.y,gs,0,Math.PI*2);
+      ctx.fillStyle = `rgba(${this.color[0]},${this.color[1]},${this.color[2]},${a*0.15})`; ctx.fill();
+    }
+  }
+}
+
+function initParticles(count, mode) { particles=[]; for(let i=0;i<count;i++) particles.push(new Particle(mode)); }
+
+function animate() {
+  frameCount++;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if (visualMode==='fire') {
+    const g=ctx.createLinearGradient(0,0,0,canvas.height);
+    g.addColorStop(0,'rgba(0,0,0,0.95)');
+    g.addColorStop(0.4,`rgba(20,0,0,${0.3+intensity*0.5})`);
+    g.addColorStop(0.7,`rgba(60,5,0,${0.2+intensity*0.4})`);
+    g.addColorStop(1,`rgba(120,15,0,${0.15+intensity*0.5})`);
+    ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
+    if (intensity>0.3) {
+      const cx=canvas.width*0.5+Math.sin(frameCount*0.008)*canvas.width*0.3;
+      const cy=canvas.height*0.4+Math.cos(frameCount*0.006)*canvas.height*0.2;
+      const tg=ctx.createRadialGradient(cx,cy,0,cx,cy,200+intensity*300);
+      tg.addColorStop(0,`rgba(0,180,170,${0.04+intensity*0.08})`);
+      tg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=tg; ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+  } else if (visualMode==='beach444') {
+    // Color cycling: black → dark red → dark orange → lighter red → lighter orange → black
+    const cycle = (frameCount * 0.003) % 1; // 0-1 continuous cycle
+    let r,g2,b;
+    if (cycle < 0.2) { // black → dark red
+      const t = cycle/0.2; r=Math.floor(80*t*intensity*2); g2=0; b=0;
+    } else if (cycle < 0.4) { // dark red → dark orange
+      const t=(cycle-0.2)/0.2; r=Math.floor(80+100*t)*Math.min(1,intensity*2); g2=Math.floor(30*t*intensity*2); b=0;
+    } else if (cycle < 0.6) { // dark orange → lighter red
+      const t=(cycle-0.4)/0.2; r=Math.floor(180*Math.min(1,intensity*2)); g2=Math.floor(30-20*t)*Math.min(1,intensity*2); b=0;
+    } else if (cycle < 0.8) { // lighter red → lighter orange
+      const t=(cycle-0.6)/0.2; r=Math.floor(180+40*t)*Math.min(1,intensity*2); g2=Math.floor(10+50*t)*Math.min(1,intensity*2); b=0;
+    } else { // lighter orange → black
+      const t=(cycle-0.8)/0.2; r=Math.floor(220*(1-t))*Math.min(1,intensity*2); g2=Math.floor(60*(1-t))*Math.min(1,intensity*2); b=0;
+    }
+    ctx.fillStyle=`rgb(${Math.floor(r)},${Math.floor(g2)},${b})`;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    // Teal swirl accents
+    if (intensity > 0.2) {
+      const cx1 = canvas.width*0.3+Math.sin(frameCount*0.006)*canvas.width*0.25;
+      const cy1 = canvas.height*0.5+Math.cos(frameCount*0.008)*canvas.height*0.3;
+      const tg1 = ctx.createRadialGradient(cx1,cy1,0,cx1,cy1,150+intensity*250);
+      tg1.addColorStop(0,`rgba(0,200,190,${0.03+intensity*0.07})`);
+      tg1.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=tg1; ctx.fillRect(0,0,canvas.width,canvas.height);
+      const cx2 = canvas.width*0.7+Math.cos(frameCount*0.005)*canvas.width*0.2;
+      const cy2 = canvas.height*0.3+Math.sin(frameCount*0.007)*canvas.height*0.25;
+      const tg2 = ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,100+intensity*200);
+      tg2.addColorStop(0,`rgba(0,180,170,${0.02+intensity*0.05})`);
+      tg2.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=tg2; ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+  } else {
+    const g=ctx.createRadialGradient(canvas.width/2,canvas.height/2,0,canvas.width/2,canvas.height/2,canvas.width*0.7);
+    g.addColorStop(0,`rgba(10,20,60,${0.1+intensity*0.3})`);
+    g.addColorStop(0.5,`rgba(5,10,30,${0.05+intensity*0.15})`);
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+
+  for(let p of particles){p.update(frameCount);p.draw(frameCount);}
+  if(animActive) animFrame=requestAnimationFrame(animate);
+}
+
+function startVisuals(mode) {
+  visualMode=mode;
+  if(animActive){particles.forEach(p=>{p.mode=mode;p.reset()});return;}
+  const count=Math.min(mode==='ocean'?350:450, Math.floor(canvas.width*canvas.height/2000));
+  initParticles(count,mode);
+  animActive=true; canvas.classList.add('active'); animate();
+}
+function stopVisuals(){animActive=false;canvas.classList.remove('active');if(animFrame)cancelAnimationFrame(animFrame);intensity=0;visualMode='none';visualSpeedRed=0.18;visualSpeedOrange=0.18;visualSpeedTeal=0.90;}
+
+// ══════════════════════════════════════════
+// FULLSCREEN
+// ══════════════════════════════════════════
+function enterFullscreen(num) {
+  document.getElementById('pageContent').classList.add('hidden');
+  document.getElementById('floatControls').classList.add('active');
+  const titles={1:'Deep State',2:'Tribal Fire',3:'Beach Ceremony 444',4:'Power Ceremony 444'};
+  document.getElementById('floatTitle').textContent=titles[num]||'';
+  if (num===3) {
+    // Build float mixer with header (hide button)
+    const fm=document.getElementById('floatMixer');
+    fm.innerHTML='<div class="mixer-header"><span class="mixer-title">Live Mixer</span><button class="mixer-hide-btn" onclick="toggleMixerVisibility(false)">Hide</button></div>'
+      +document.getElementById('mixerGrid').innerHTML;
+    fm.classList.add('active');
+    fm.classList.remove('hidden-mixer');
+    document.getElementById('mixerShowBtn').classList.remove('active');
+    // Sync float sliders with inline sliders
+    fm.querySelectorAll('input[type=range]').forEach(s=>{
+      s.addEventListener('input', function(){
+        const layer=this.dataset.layer;
+        const val=parseFloat(this.value)/100;
+        if (layer === '_master') {
+          updateMasterVolume(val);
+        } else {
+          const inline=document.querySelector('#mixerGrid input[data-layer="'+layer+'"]');
+          if(inline) inline.value=Math.round(val*100);
+          updateMixerLayer(layer,val);
+        }
+      });
+    });
+  }
+  if (num===4) {
+    const fm=document.getElementById('floatMixer');
+    fm.innerHTML='<div class="mixer-header"><span class="mixer-title">POWER 444 MIXER</span><button class="mixer-hide-btn" onclick="toggleMixerVisibility(false)">Hide</button></div>'
+      +document.getElementById('mixerGrid4').innerHTML;
+    fm.classList.add('active');
+    fm.classList.remove('hidden-mixer');
+    document.getElementById('mixerShowBtn').classList.remove('active');
+    // Strip inline handlers from cloned elements to avoid double-firing
+    fm.querySelectorAll('[oninput]').forEach(el => el.removeAttribute('oninput'));
+    fm.querySelectorAll('[onchange]').forEach(el => el.removeAttribute('onchange'));
+    // Sync slider values from inline mixer to float mixer
+    document.querySelectorAll('#mixerGrid4 input[type=range]').forEach(src => {
+      const caveSlider = src.dataset.caveSlider;
+      const caveLayer = src.dataset.caveLayer;
+      const visualSpeed = src.dataset.visualSpeed;
+      let sel = null;
+      if (caveSlider) sel = fm.querySelector('input[data-cave-slider="'+caveSlider+'"]');
+      else if (caveLayer) sel = fm.querySelector('input[data-cave-layer="'+caveLayer+'"]');
+      else if (visualSpeed) sel = fm.querySelector('input[data-visual-speed="'+visualSpeed+'"]');
+      if (sel) sel.value = src.value;
+    });
+    document.querySelectorAll('#mixerGrid4 input[type=checkbox]').forEach(src => {
+      const tog = src.dataset.caveToggle;
+      if (tog) { const sel = fm.querySelector('input[data-cave-toggle="'+tog+'"]'); if (sel) sel.checked = src.checked; }
+    });
+    // Wire up float mixer controls: master slider
+    fm.querySelectorAll('input[data-cave-layer]').forEach(s=>{
+      s.addEventListener('input', function(){
+        if (this.dataset.caveLayer === '_master') updateCaveMaster(this.value/100);
+      });
+    });
+    // Wire up float mixer: per-layer sliders (pass raw slider value 1-300)
+    fm.querySelectorAll('input[data-cave-slider]').forEach(s=>{
+      s.addEventListener('input', function(){
+        updateCaveLayerVol(this.dataset.caveSlider, this.value);
+      });
+    });
+    // Wire up float mixer: per-layer toggles
+    fm.querySelectorAll('input[data-cave-toggle]').forEach(s=>{
+      s.addEventListener('change', function(){
+        toggleCaveLayer(this.dataset.caveToggle, this.checked);
+      });
+    });
+    // Wire up float mixer: visual speed sliders (pass raw slider value 1-300)
+    fm.querySelectorAll('input[data-visual-speed]').forEach(s=>{
+      s.addEventListener('input', function(){
+        updateVisualSpeed(this.dataset.visualSpeed, this.value);
+      });
+    });
+  }
+}
+function exitFullscreen() {
+  document.getElementById('pageContent').classList.remove('hidden');
+  document.getElementById('floatControls').classList.remove('active');
+  document.getElementById('floatMixer').classList.remove('active');
+  document.getElementById('floatMixer').classList.remove('hidden-mixer');
+  document.getElementById('mixerShowBtn').classList.remove('active');
+}
+
+function toggleMixerVisibility(show) {
+  const fm = document.getElementById('floatMixer');
+  const sb = document.getElementById('mixerShowBtn');
+  if (show) {
+    fm.classList.remove('hidden-mixer');
+    sb.classList.remove('active');
+  } else {
+    fm.classList.add('hidden-mixer');
+    sb.classList.add('active');
+  }
+}
+
+// ══════════════════════════════════════════
+// WEB AUDIO MIXER (Track 3)
+// ══════════════════════════════════════════
+const MIXER_LAYERS = [
+  { id:'waves',   label:'Ocean Waves',  type:'noise', noiseType:'brown', freq:null, gain:1.0, hp:80, lp:900, trem:0.12 },
+  { id:'drum1',   label:'Deep Drums',   type:'osc',   freq:55,  gain:1.0, trem:1.3 },
+  { id:'drum2',   label:'High Drums',   type:'osc',   freq:82,  gain:0.9, trem:2.6 },
+  { id:'drum3',   label:'Rumble Drums', type:'osc',   freq:45,  gain:0.9, trem:1.8 },
+  { id:'chime528',label:'528Hz Chime',  type:'osc',   freq:528, gain:0.8, trem:0.1 },
+  { id:'chime432',label:'432Hz Chime',  type:'osc',   freq:432, gain:0.75, trem:0.1 },
+  { id:'chime417',label:'417Hz Chime',  type:'osc',   freq:417, gain:0.7, trem:0.1 },
+  { id:'chime396',label:'396Hz Chime',  type:'osc',   freq:396, gain:0.65, trem:0.1 },
+  { id:'om',      label:'136Hz Om',     type:'osc',   freq:136.1,gain:0.7, trem:0.1 },
+  { id:'chant',   label:'Chanting',     type:'osc',   freq:110, gain:1.0, trem:0.3, harmonics:[220,330] },
+  { id:'iso',     label:'Isochronic',   type:'osc',   freq:200, gain:0.5, trem:6.0 },
+  { id:'mono4',   label:'4Hz Monaural', type:'osc',   freq:200, gain:0.4, trem:4.0 },
+  { id:'mono7',   label:'7Hz Monaural', type:'osc',   freq:300, gain:0.35, trem:7.0 },
+  { id:'mono10',  label:'10Hz Monaural',type:'osc',   freq:400, gain:0.3, trem:10.0 },
+];
+
+function buildMixerUI() {
+  const grid = document.getElementById('mixerGrid');
+  grid.innerHTML = '';
+  // Master volume slider first
+  const masterRow = document.createElement('div');
+  masterRow.className = 'mixer-row';
+  masterRow.style.marginBottom = '8px';
+  masterRow.style.paddingBottom = '8px';
+  masterRow.style.borderBottom = '1px solid rgba(255,255,255,0.08)';
+  masterRow.innerHTML = `<span class="mixer-label" style="color:#f59e0b;font-weight:600">Master Vol</span>
+    <input type="range" min="0" max="200" value="100" data-layer="_master"
+      oninput="updateMasterVolume(this.value/100)">`;
+  grid.appendChild(masterRow);
+  // Individual layers
+  MIXER_LAYERS.forEach(l => {
+    const row = document.createElement('div');
+    row.className = 'mixer-row';
+    row.innerHTML = `<span class="mixer-label">${l.label}</span>
+      <input type="range" min="0" max="100" value="${Math.round(l.gain*100)}" data-layer="${l.id}"
+        oninput="updateMixerLayer('${l.id}',this.value/100)">`;
+    grid.appendChild(row);
+  });
+}
+buildMixerUI();
+
+function updateMasterVolume(val) {
+  masterVolume = val;
+  if (beach444nodes._master) {
+    // Directly set the current gain scaled by master volume
+    const t = beach444elapsed || 0;
+    let baseGain;
+    if (t < 60) baseGain = 0.9;
+    else if (t < 120) baseGain = 1.2;
+    else if (t < 300) baseGain = 1.5;
+    else if (t < 420) {
+      const step = Math.floor((t - 300) / 12);
+      baseGain = Math.max(0, 1.5 - step * 0.15);
+    } else baseGain = 0;
+    beach444nodes._master.gain.setValueAtTime(baseGain * val, beach444ctx.currentTime);
+  }
+  // Sync float mixer master slider
+  const fm = document.getElementById('floatMixer');
+  if (fm.classList.contains('active')) {
+    const fs = fm.querySelector('input[data-layer="_master"]');
+    if (fs) fs.value = Math.round(val * 100);
+  }
+  // Sync inline master slider
+  const is = document.querySelector('#mixerGrid input[data-layer="_master"]');
+  if (is) is.value = Math.round(val * 100);
+}
+
+function createNoiseBuffer(actx, seconds) {
+  const sr = actx.sampleRate;
+  const len = sr * seconds;
+  const buf = actx.createBuffer(1, len, sr);
+  const data = buf.getChannelData(0);
+  // Brown noise
+  let last = 0;
+  for (let i = 0; i < len; i++) {
+    const white = Math.random()*2-1;
+    last = (last + (0.02 * white)) / 1.02;
+    data[i] = last * 3.5;
+  }
+  return buf;
+}
+
+function initBeach444() {
+  if (beach444ctx && beach444ctx !== sharedAudioCtx) { try{beach444ctx.close();}catch(e){} }
+  beach444ctx = null;
+
+  // On iOS, reuse the unlocked shared context; otherwise create fresh
+  let actx;
+  if (sharedAudioCtx && sharedAudioCtx.state === 'running') {
+    actx = sharedAudioCtx;
+  } else {
+    actx = new (window.AudioContext||window.webkitAudioContext)();
+  }
+  if (actx.state === 'suspended') actx.resume();
+  beach444ctx = actx;
+  beach444nodes = {};
+  console.log('Beach444 init, context state:', actx.state, 'sampleRate:', actx.sampleRate);
+
+  // Master gain with volume envelope
+  const master = actx.createGain();
+  master.connect(actx.destination);
+  beach444nodes._master = master;
+
+  // Volume envelope: 0-60s:0.9, 60-120s:1.2, 120-300s:1.5, 300+:fade
+  // (tripled from original 0.3/0.4/0.5)
+  const now = actx.currentTime;
+  const volScale = masterVolume; // from master slider (default 1.0)
+  master.gain.setValueAtTime(0.9 * volScale, now);
+  master.gain.setValueAtTime(0.9 * volScale, now+59);
+  master.gain.linearRampToValueAtTime(1.2 * volScale, now+60);
+  master.gain.setValueAtTime(1.2 * volScale, now+119);
+  master.gain.linearRampToValueAtTime(1.5 * volScale, now+120);
+  master.gain.setValueAtTime(1.5 * volScale, now+300);
+  // Fade: 5% steps every 12 seconds (from 1.5 down)
+  for (let i=1;i<=10;i++) {
+    master.gain.linearRampToValueAtTime(Math.max(0, (1.5 - i*0.15) * volScale), now+300+i*12);
+  }
+  master.gain.linearRampToValueAtTime(0, now+420);
+
+  MIXER_LAYERS.forEach(l => {
+    const layerGain = actx.createGain();
+    layerGain.gain.value = l.gain;
+    layerGain.connect(master);
+
+    if (l.type === 'noise') {
+      const buf = createNoiseBuffer(actx, 420);
+      const src = actx.createBufferSource();
+      src.buffer = buf;
+      src.loop = false;
+      // Filter chain: source -> highpass -> lowpass -> gain
+      let lastNode = src;
+      if (l.hp) {
+        const hp = actx.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = l.hp;
+        lastNode.connect(hp); lastNode = hp;
+      }
+      if (l.lp) {
+        const lp = actx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = l.lp;
+        lastNode.connect(lp); lastNode = lp;
+      }
+      lastNode.connect(layerGain);
+      src.start(0);
+      beach444nodes[l.id] = { gain: layerGain, src };
+    } else {
+      const osc = actx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = l.freq;
+      osc.connect(layerGain);
+      osc.start(0);
+
+      // Tremolo via LFO modulating gain
+      if (l.trem && l.trem > 0) {
+        const lfo = actx.createOscillator();
+        const lfoGain = actx.createGain();
+        lfo.type = 'sine';
+        lfo.frequency.value = l.trem;
+        // Modulation depth: half the layer gain so it pulses between 50% and 150%
+        lfoGain.gain.value = l.gain * 0.5;
+        lfo.connect(lfoGain);
+        lfoGain.connect(layerGain.gain);
+        lfo.start(0);
+      }
+
+      // Harmonics for chanting
+      if (l.harmonics) {
+        l.harmonics.forEach((hf,idx) => {
+          const ho = actx.createOscillator();
+          ho.type = 'sine'; ho.frequency.value = hf;
+          const hg = actx.createGain();
+          hg.gain.value = l.gain * (0.5 - idx*0.15);
+          ho.connect(hg); hg.connect(master);
+          ho.start(0);
+        });
+      }
+
+      beach444nodes[l.id] = { gain: layerGain, osc };
+    }
+  });
+
+  console.log('Beach 444 Web Audio initialized, context state:', actx.state);
+}
+
+function updateMixerLayer(id, val) {
+  if (beach444nodes[id] && beach444nodes[id].gain) {
+    beach444nodes[id].gain.gain.value = val;
+  }
+  // Sync float mixer if visible
+  const fm = document.getElementById('floatMixer');
+  if (fm.classList.contains('active')) {
+    const fs = fm.querySelector('input[data-layer="'+id+'"]');
+    if (fs) fs.value = Math.round(val*100);
+  }
+}
+
+function startBeach444() {
+  initBeach444();
+  beach444playing = true;
+  beach444startTime = Date.now();
+  beach444elapsed = 0;
+  updateBeach444Progress();
+}
+
+function stopBeach444() {
+  // Stop all sources/oscillators without closing the shared context
+  if (beach444ctx) {
+    Object.keys(beach444nodes).forEach(k => {
+      if (k === '_master') return;
+      const n = beach444nodes[k];
+      try { if (n.osc) n.osc.stop(); } catch(e){}
+      try { if (n.src) n.src.stop(); } catch(e){}
+    });
+    // Disconnect master
+    if (beach444nodes._master) try { beach444nodes._master.disconnect(); } catch(e){}
+    // Only close if not the shared context
+    if (beach444ctx !== sharedAudioCtx) {
+      try { beach444ctx.close(); } catch(e){}
+    }
+  }
+  beach444ctx = null;
+  beach444playing = false;
+  beach444nodes = {};
+}
+
+function updateBeach444Progress() {
+  if (!beach444playing) return;
+  beach444elapsed = (Date.now() - beach444startTime) / 1000;
+  if (beach444elapsed >= 420) { stopAllAudio(); return; }
+  const pct = (beach444elapsed / 420) * 100;
+  document.getElementById('progress3').style.width = pct+'%';
+  document.getElementById('floatProgress').style.width = pct+'%';
+  const min = Math.floor(beach444elapsed/60);
+  const sec = Math.floor(beach444elapsed%60);
+  const ts = min+':'+(sec<10?'0':'')+sec;
+  document.getElementById('time3').textContent = ts;
+  document.getElementById('floatTime').textContent = ts;
+
+  // Intensity for visuals
+  const t = beach444elapsed;
+  if(t<60) intensity=0.3;
+  else if(t<120) intensity=0.5;
+  else if(t<300) intensity=0.7+Math.sin(t*0.15)*0.2;
+  else { const fp=(t-300)/120; intensity=0.7*(1-fp); }
+  intensity=Math.min(1,Math.max(0,intensity));
+
+  requestAnimationFrame(updateBeach444Progress);
+}
+
+// ══════════════════════════════════════════
+// PLAYER
+// ══════════════════════════════════════════
+const playIcon = '<svg viewBox="0 0 24 24" style="fill:white;width:24px;height:24px;margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>';
+const pauseIcon = '<svg viewBox="0 0 24 24" style="fill:white;width:24px;height:24px"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
+function stopAllAudio() {
+  for (let i=1;i<=2;i++) {
+    const a=document.getElementById('audio'+i);
+    const btn=document.getElementById('playBtn'+i);
+    if(a){a.pause();a.currentTime=0;}
+    if(btn){btn.innerHTML=playIcon;btn.classList.remove('playing');}
+  }
+  // Track 3
+  stopBeach444();
+  const btn3=document.getElementById('playBtn3');
+  if(btn3){btn3.innerHTML=playIcon;btn3.classList.remove('playing');}
+  document.getElementById('progress3').style.width='0%';
+  document.getElementById('time3').textContent='0:00';
+  // Track 4
+  stopCave444();
+  const btn4=document.getElementById('playBtn4');
+  if(btn4){btn4.innerHTML=playIcon;btn4.classList.remove('playing');}
+  if(document.getElementById('progress4')) document.getElementById('progress4').style.width='0%';
+  if(document.getElementById('time4')) document.getElementById('time4').textContent='0:00';
+
+  currentTrack=0;
+  stopVisuals();
+  exitFullscreen();
+}
+
+function startTrack(num) {
+  if (currentTrack===num) { stopAllAudio(); return; }
+  stopAllAudio();
+  currentTrack=num;
+  const btn=document.getElementById('playBtn'+num);
+  btn.innerHTML=pauseIcon;
+  btn.classList.add('playing');
+
+  const modes={1:'ocean',2:'fire',3:'beach444',4:'beach444'};
+  startVisuals(modes[num]);
+  enterFullscreen(num);
+  document.getElementById('floatPause').innerHTML='<svg viewBox="0 0 24 24" style="fill:white;width:18px;height:18px"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
+  if (num===4) {
+    startCave444();
+    return;
+  }
+
+  if (num===3) {
+    startBeach444();
+    return;
+  }
+
+  const audio=document.getElementById('audio'+num);
+  audio.play();
+  audio.ontimeupdate=function(){
+    if(!audio.duration)return;
+    const pct=(audio.currentTime/audio.duration)*100;
+    document.getElementById('progress'+num).style.width=pct+'%';
+    document.getElementById('floatProgress').style.width=pct+'%';
+    const min=Math.floor(audio.currentTime/60);
+    const sec=Math.floor(audio.currentTime%60);
+    const ts=min+':'+(sec<10?'0':'')+sec;
+    document.getElementById('time'+num).textContent=ts;
+    document.getElementById('floatTime').textContent=ts;
+    const t=audio.currentTime, dur=audio.duration;
+    if(num===2){
+      if(t<60)intensity=0.3;else if(t<120)intensity=0.5;
+      else if(t<300)intensity=0.8+Math.sin(t*0.2)*0.15;
+      else{intensity=0.8*(1-(t-300)/(dur-300));}
+    } else {
+      intensity=0.2+(t/dur)*0.7+Math.sin(t*0.3)*0.1;
+    }
+    intensity=Math.min(1,Math.max(0,intensity));
+  };
+  audio.onended=function(){stopAllAudio();};
+}
+
+function seekTrack(e,num) {
+  if(num===3) return; // Can't seek Web Audio easily
+  const r=e.currentTarget.getBoundingClientRect();
+  const pct=(e.clientX-r.left)/r.width;
+  if(num===4) { seekCave444(pct); return; }
+  const a=document.getElementById('audio'+num);
+  if(a && a.duration)a.currentTime=pct*a.duration;
+}
+
+function floatToggle() {
+  if(currentTrack>0) stopAllAudio();
+}
+function floatSeek(e) {
+  const r=e.currentTarget.getBoundingClientRect();
+  const pct=(e.clientX-r.left)/r.width;
+  if(currentTrack===4){ seekCave444(pct); return; }
+  if(currentTrack>0&&currentTrack<=2){
+    const a=document.getElementById('audio'+currentTrack);
+    if(a&&a.duration)a.currentTime=pct*a.duration;
+  }
+}
+
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&currentTrack>0)stopAllAudio();});
+
+// ══════════════════════════════════════════
+// POWER 444: Multi-track audio with per-layer volume
+// Uses HTML5 Audio elements (iOS-compatible, seekable)
+// ══════════════════════════════════════════
+// Default volumes -- slider 100 = these values, range 1-300 (so 300 = 3x default)
+const CAVE_LAYERS = [
+  { id:'ocean-base',  label:'Ocean Waves',    on:true, defVol:0.12 },
+  { id:'ocean-crash', label:'Wave Crashes',    on:true, defVol:0.45 },
+  { id:'mist',        label:'Mist Spray',      on:true, defVol:0.14 },
+  { id:'drums',       label:'Ceremony Drums',  on:true, defVol:0.38 },
+  { id:'bowls',       label:'Singing Bowls',    on:true, defVol:0.50 },
+  { id:'chanting',    label:'Tribal Chanting',  on:true, defVol:0.14 },
+  { id:'solfeggio',   label:'Solfeggio Tones',  on:true, defVol:0.50 },
+  { id:'om',          label:'Om Drone',         on:true, defVol:0.28 },
+  { id:'mono4',       label:'4Hz Monaural',     on:true, defVol:0.50 },
+  { id:'mono7',       label:'7Hz Monaural',     on:true, defVol:0.50 },
+  { id:'iso',         label:'Isochronic',       on:true, defVol:0.50 },
+];
+// Default visual speeds -- slider 100 = these values, range 1-300
+const DEF_SPEED = { red: 0.18, orange: 0.18, teal: 0.90 };
+let cave444playing = false;
+let caveLayerState = {}; // {id: {on:bool, vol:number}}
+
+function buildCaveMixerUI() {
+  const grid = document.getElementById('mixerGrid4');
+  if (!grid) return;
+  grid.innerHTML = '';
+  grid.style.display = 'flex';
+  grid.style.flexDirection = 'column';
+  grid.style.gap = '2px';
+  // Master volume slider at top
+  const masterRow = document.createElement('div');
+  masterRow.className = 'toggle-row';
+  masterRow.style.marginBottom = '10px';
+  masterRow.style.paddingBottom = '10px';
+  masterRow.style.borderBottom = '1px solid rgba(255,255,255,0.08)';
+  masterRow.innerHTML = '<span class="toggle-label" style="color:#34d399;font-weight:600">Master Vol</span>' +
+    '<input type="range" min="0" max="100" value="100" data-cave-layer="_master" ' +
+    'oninput="updateCaveMaster(this.value/100)">';
+  grid.appendChild(masterRow);
+  // Visual speed sliders (reds, oranges, teals)
+  const speedColors = [
+    { id:'red',    label:'Red Speed',    color:'#ef4444', varName:'visualSpeedRed' },
+    { id:'orange', label:'Orange Speed',  color:'#f97316', varName:'visualSpeedOrange' },
+    { id:'teal',   label:'Teal Speed',    color:'#14b8a6', varName:'visualSpeedTeal' },
+  ];
+  const speedSection = document.createElement('div');
+  speedSection.style.cssText = 'margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.08)';
+  const speedLabel = document.createElement('p');
+  speedLabel.style.cssText = 'font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#555;font-family:Inter,system-ui,sans-serif;margin-bottom:6px';
+  speedLabel.textContent = 'VISUAL SPEED';
+  speedSection.appendChild(speedLabel);
+  speedColors.forEach(sc => {
+    const row = document.createElement('div');
+    row.className = 'toggle-row';
+    row.innerHTML = '<span class="toggle-label" style="color:' + sc.color + '">' + sc.label + '</span>' +
+      '<input type="range" min="1" max="300" value="100" data-visual-speed="' + sc.id + '" ' +
+      'oninput="updateVisualSpeed(\'' + sc.id + '\',this.value)" style="flex:1">';
+    speedSection.appendChild(row);
+  });
+  grid.appendChild(speedSection);
+
+  // Individual layers: label + slider (0-100, 50=default) + on/off toggle
+  CAVE_LAYERS.forEach(l => {
+    caveLayerState[l.id] = { on: l.on, vol: l.defVol };
+    const row = document.createElement('div');
+    row.className = 'toggle-row';
+    row.innerHTML = '<span class="toggle-label" id="cave-label-' + l.id + '">' + l.label + '</span>' +
+      '<input type="range" min="1" max="300" value="100" data-cave-slider="' + l.id + '" ' +
+      'oninput="updateCaveLayerVol(\'' + l.id + '\',this.value)">' +
+      '<label class="toggle-switch">' +
+      '<input type="checkbox" checked data-cave-toggle="' + l.id + '" onchange="toggleCaveLayer(\'' + l.id + '\',this.checked)">' +
+      '<span class="toggle-slider"></span></label>';
+    grid.appendChild(row);
+  });
+}
+buildCaveMixerUI();
+
+let caveMasterVol = 1.0;
+
+function updateVisualSpeed(group, sliderVal) {
+  // sliderVal is 1-300 where 100 = default speed, 300 = 3x default
+  const actual = DEF_SPEED[group] * (sliderVal / 100);
+  if (group === 'red') visualSpeedRed = actual;
+  else if (group === 'orange') visualSpeedOrange = actual;
+  else if (group === 'teal') visualSpeedTeal = actual;
+  // Sync all matching sliders (inline + float)
+  document.querySelectorAll('input[data-visual-speed="' + group + '"]').forEach(s => {
+    s.value = Math.round(sliderVal);
+  });
+}
+
+function applyCaveVolume(id) {
+  const el = document.getElementById('cave-' + id);
+  const state = caveLayerState[id];
+  if (!el || !state) return;
+  if (state.on) {
+    el.volume = state.vol * caveMasterVol;
+    // If track is playing but this element is paused, resume it
+    if (cave444playing && el.paused) {
+      // Sync to primary track position
+      const primary = document.getElementById('cave-ocean-base');
+      if (primary && !primary.paused) el.currentTime = primary.currentTime;
+      el.play().catch(e => console.log('Cave resume error:', id, e));
+    }
+  } else {
+    // Actually mute AND pause so no sound leaks
+    el.volume = 0;
+    if (!el.paused) el.pause();
+  }
+}
+
+function toggleCaveLayer(id, on) {
+  if (!caveLayerState[id]) caveLayerState[id] = { on: true, vol: 1.0 };
+  caveLayerState[id].on = on;
+  applyCaveVolume(id);
+  // Update label styling
+  const label = document.getElementById('cave-label-' + id);
+  if (label) label.classList.toggle('off', !on);
+  // Update slider disabled state
+  syncCaveSliderState(id, on);
+  // Sync float mixer toggle if visible
+  const fm = document.getElementById('floatMixer');
+  if (fm.classList.contains('active')) {
+    const ft = fm.querySelector('input[data-cave-toggle="' + id + '"]');
+    if (ft && ft.checked !== on) ft.checked = on;
+    const fs = fm.querySelector('input[data-cave-slider="' + id + '"]');
+    if (fs) fs.classList.toggle('disabled-slider', !on);
+  }
+  // Sync inline toggle
+  const it = document.querySelector('#mixerGrid4 input[data-cave-toggle="' + id + '"]');
+  if (it && it.checked !== on) it.checked = on;
+  const is2 = document.querySelector('#mixerGrid4 input[data-cave-slider="' + id + '"]');
+  if (is2) is2.classList.toggle('disabled-slider', !on);
+}
+
+function syncCaveSliderState(id, on) {
+  // Toggle disabled class on all matching sliders
+  document.querySelectorAll('input[data-cave-slider="' + id + '"]').forEach(s => {
+    s.classList.toggle('disabled-slider', !on);
+  });
+}
+
+function updateCaveLayerVol(id, sliderVal) {
+  // sliderVal is 1-300 where 100 = default volume, 300 = 3x default (capped at 1.0)
+  const layer = CAVE_LAYERS.find(l => l.id === id);
+  const defVol = layer ? layer.defVol : 0.5;
+  const actual = Math.min(1.0, defVol * (sliderVal / 100));
+  if (!caveLayerState[id]) caveLayerState[id] = { on: true, vol: defVol };
+  caveLayerState[id].vol = actual;
+  applyCaveVolume(id);
+  // Sync float mixer slider if visible
+  const fm = document.getElementById('floatMixer');
+  if (fm.classList.contains('active')) {
+    const fs = fm.querySelector('input[data-cave-slider="' + id + '"]');
+    if (fs) fs.value = Math.round(sliderVal);
+  }
+  // Sync inline slider
+  const is2 = document.querySelector('#mixerGrid4 input[data-cave-slider="' + id + '"]');
+  if (is2) is2.value = Math.round(sliderVal);
+}
+
+function updateCaveMaster(val) {
+  caveMasterVol = val;
+  CAVE_LAYERS.forEach(l => applyCaveVolume(l.id));
+  // Sync float mixer master
+  const fm = document.getElementById('floatMixer');
+  if (fm.classList.contains('active')) {
+    const fs = fm.querySelector('input[data-cave-layer="_master"]');
+    if (fs) fs.value = Math.round(val * 100);
+  }
+  // Sync inline master
+  const is2 = document.querySelector('#mixerGrid4 input[data-cave-layer="_master"]');
+  if (is2) is2.value = Math.round(val * 100);
+}
+
+function startCave444() {
+  cave444playing = true;
+  CAVE_LAYERS.forEach(l => {
+    const el = document.getElementById('cave-' + l.id);
+    if (el) {
+      // Reset all layers to ON at default volume (slider midpoint)
+      caveLayerState[l.id] = { on: true, vol: l.defVol };
+      el.volume = l.defVol * caveMasterVol;
+      el.currentTime = 0;
+      el.play().catch(e => console.log('Cave play error:', l.id, e));
+    }
+    // Reset toggles to ON
+    document.querySelectorAll('input[data-cave-toggle="' + l.id + '"]').forEach(t => t.checked = true);
+    // Reset sliders to 100 (default)
+    document.querySelectorAll('input[data-cave-slider="' + l.id + '"]').forEach(s => { s.value = 100; s.classList.remove('disabled-slider'); });
+    const label = document.getElementById('cave-label-' + l.id);
+    if (label) label.classList.remove('off');
+  });
+  // Reset master slider
+  document.querySelectorAll('input[data-cave-layer="_master"]').forEach(s => s.value = 100);
+  caveMasterVol = 1.0;
+  // Reset visual speeds to defaults
+  visualSpeedRed = DEF_SPEED.red;
+  visualSpeedOrange = DEF_SPEED.orange;
+  visualSpeedTeal = DEF_SPEED.teal;
+  document.querySelectorAll('input[data-visual-speed]').forEach(s => s.value = 100);
+  // Use first layer for progress tracking
+  const primary = document.getElementById('cave-ocean-base');
+  if (primary) {
+    primary.ontimeupdate = function() {
+      if (!primary.duration) return;
+      const pct = (primary.currentTime / primary.duration) * 100;
+      document.getElementById('progress4').style.width = pct + '%';
+      document.getElementById('floatProgress').style.width = pct + '%';
+      const min = Math.floor(primary.currentTime / 60);
+      const sec = Math.floor(primary.currentTime % 60);
+      const ts = min + ':' + (sec < 10 ? '0' : '') + sec;
+      document.getElementById('time4').textContent = ts;
+      document.getElementById('floatTime').textContent = ts;
+      // Visual intensity
+      const t = primary.currentTime;
+      if (t < 60) intensity = 0.3;
+      else if (t < 120) intensity = 0.5;
+      else if (t < 300) intensity = 0.7 + Math.sin(t * 0.15) * 0.2;
+      else { intensity = 0.7 * (1 - (t - 300) / 120); }
+      intensity = Math.min(1, Math.max(0, intensity));
+    };
+    primary.onended = function() { stopAllAudio(); };
+  }
+}
+
+function stopCave444() {
+  CAVE_LAYERS.forEach(l => {
+    const el = document.getElementById('cave-' + l.id);
+    if (el) { el.pause(); el.currentTime = 0; el.volume = 0; }
+  });
+  cave444playing = false;
+}
+
+function seekCave444(pct) {
+  const primary = document.getElementById('cave-ocean-base');
+  if (!primary || !primary.duration) return;
+  const time = pct * primary.duration;
+  CAVE_LAYERS.forEach(l => {
+    const el = document.getElementById('cave-' + l.id);
+    if (el) el.currentTime = time;
+  });
+}
+
+// Fallback: play pre-mixed MP3 for track 3 (for iOS or when Web Audio doesn't work)
+let track3fallback = false;
+function startTrack3Fallback() {
+  stopAllAudio();
+  track3fallback = true;
+  currentTrack = 3;
+  const btn = document.getElementById('playBtn3');
+  btn.innerHTML = pauseIcon;
+  btn.classList.add('playing');
+  startVisuals('beach444');
+  enterFullscreen(3);
+  document.getElementById('floatPause').innerHTML='<svg viewBox="0 0 24 24" style="fill:white;width:18px;height:18px"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
+  const audio = document.getElementById('audio3');
+  audio.currentTime = 0;
+  audio.play();
+  audio.ontimeupdate = function() {
+    if (!audio.duration) return;
+    const pct = (audio.currentTime/audio.duration)*100;
+    document.getElementById('progress3').style.width=pct+'%';
+    document.getElementById('floatProgress').style.width=pct+'%';
+    const min=Math.floor(audio.currentTime/60);
+    const sec=Math.floor(audio.currentTime%60);
+    const ts=min+':'+(sec<10?'0':'')+sec;
+    document.getElementById('time3').textContent=ts;
+    document.getElementById('floatTime').textContent=ts;
+    const t=audio.currentTime;
+    if(t<60) intensity=0.3;
+    else if(t<120) intensity=0.5;
+    else if(t<300) intensity=0.7+Math.sin(t*0.15)*0.2;
+    else { intensity=0.7*(1-(t-300)/120); }
+    intensity=Math.min(1,Math.max(0,intensity));
+  };
+  audio.onended = function() { stopAllAudio(); };
+}
+
+// Override stopAllAudio to also handle fallback
+const _origStopAll = stopAllAudio;
+stopAllAudio = function() {
+  if (track3fallback) {
+    const a3 = document.getElementById('audio3');
+    if (a3) { a3.pause(); a3.currentTime = 0; }
+    track3fallback = false;
+  }
+  _origStopAll();
+};
+
+// ══════════════════════════════════════════
+// CUSTOM MEDITATION REQUEST FORM
+// ══════════════════════════════════════════
+async function submitCustomForm() {
+  const name = document.getElementById('cfName').value.trim();
+  const phone = document.getElementById('cfPhone').value.trim();
+  const email = document.getElementById('cfEmail').value.trim();
+  const website = document.getElementById('cfWebsite').value.trim();
+  const comments = document.getElementById('cfComments').value.trim();
+
+  if (!name || !phone || !email || !comments) {
+    alert('Please fill in all required fields.');
+    return;
+  }
+
+  const btn = document.getElementById('cfSubmit');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  try {
+    await fetch('https://jeff-cline.com/api/todo/webhook/lead-ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CRM-Key': 'jc-crm-2024' },
+      body: JSON.stringify({
+        source: 'jeff-cline.com/meditations',
+        leadType: 'CUSTOM_MEDITATION',
+        name: name,
+        email: email,
+        phone: phone,
+        website: website,
+        notes: comments,
+        tags: ['custom-meditation', 'meditations-page']
+      })
+    });
+  } catch(e) { console.log('Lead submit error:', e); }
+
+  // Show thank you regardless
+  document.getElementById('formFields').style.display = 'none';
+  document.getElementById('thankYou').style.display = 'block';
+}
+</script>
+</body>
+</html>

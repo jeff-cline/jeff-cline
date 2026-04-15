@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #111111;
+  --bg-light: #1a1a1a;
+  --bg-card: #1e1e1e;
+  --orange: #FF8900;
+  --red: #DC2626;
+  --text: #f0f0f0;
+  --text-muted: #888888;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+::selection {
+  background: var(--orange);
+  color: #000;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 137, 0, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(255, 137, 0, 0.6); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.6s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--orange), var(--red));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card hover */
+.card-hover {
+  transition: all 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 40px rgba(255, 137, 0, 0.15);
+}
+
+/* Button styles */
+.btn-primary {
+  background: var(--orange);
+  color: #000;
+  font-weight: 700;
+  padding: 12px 32px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: inline-block;
+  text-decoration: none;
+}
+.btn-primary:hover {
+  background: #ffa033;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 137, 0, 0.4);
+}
+
+.btn-secondary {
+  border: 2px solid var(--red);
+  color: var(--red);
+  font-weight: 700;
+  padding: 12px 32px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: inline-block;
+  text-decoration: none;
+}
+.btn-secondary:hover {
+  background: var(--red);
+  color: #000;
+  transform: translateY(-2px);
+}

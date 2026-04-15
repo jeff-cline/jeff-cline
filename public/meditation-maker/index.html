@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Meditation Maker | Jeff Cline</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;color:#fff;font-family:Georgia,'Times New Roman',serif;min-height:100vh;overflow-x:hidden}
+.container{max-width:900px;margin:0 auto;padding:40px 24px}
+.back{display:inline-block;margin-bottom:24px;color:#555;text-decoration:none;font-size:14px;font-family:Inter,system-ui,sans-serif}
+.back:hover{color:#7c3aed}
+.hero{text-align:center;padding:60px 0 40px}
+.hero .tag{font-size:12px;letter-spacing:0.3em;text-transform:uppercase;color:#666;margin-bottom:16px;font-family:Inter,system-ui,sans-serif}
+.hero h1{font-size:42px;font-weight:700;margin-bottom:16px}
+.hero .subtitle{font-size:16px;color:#888;max-width:520px;margin:0 auto;line-height:1.6;font-family:Inter,system-ui,sans-serif}
+
+/* Steps */
+.step{margin-bottom:40px}
+.step-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.step-num{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:Inter,system-ui,sans-serif;flex-shrink:0}
+.step-label{font-size:13px;letter-spacing:0.15em;text-transform:uppercase;color:#888;font-family:Inter,system-ui,sans-serif}
+
+/* Title input */
+.title-input{width:100%;padding:14px 20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#fff;font-size:18px;font-family:Georgia,serif;outline:none;transition:border-color 0.3s}
+.title-input:focus{border-color:rgba(124,58,237,0.5)}
+
+/* Category grid */
+.cat-label{font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#666;font-family:Inter,system-ui,sans-serif;margin:20px 0 12px;padding-left:4px}
+.preset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.preset-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px 16px;cursor:pointer;transition:all 0.3s;text-align:center}
+.preset-card:hover{border-color:rgba(124,58,237,0.3);transform:translateY(-2px)}
+.preset-card.selected{border-color:rgba(16,185,129,0.5);background:rgba(16,185,129,0.08)}
+.preset-card .preset-icon{font-size:28px;margin-bottom:8px}
+.preset-card .preset-name{font-size:14px;font-weight:600;margin-bottom:4px;font-family:Inter,system-ui,sans-serif}
+.preset-card .preset-desc{font-size:11px;color:#888;font-family:Inter,system-ui,sans-serif;line-height:1.4}
+.preview-btn{display:inline-block;margin-top:8px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#a78bfa;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);padding:4px 12px;border-radius:10px;cursor:pointer;font-family:Inter,system-ui,sans-serif;transition:all 0.2s}
+.preview-btn:hover{background:rgba(124,58,237,0.25)}
+.preview-btn.playing{color:#34d399;background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.3)}
+
+/* Mixer panel */
+.mixer-panel{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;display:none}
+.mixer-panel.active{display:block}
+.mixer-panel .mixer-title{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:#555;font-family:Inter,system-ui,sans-serif;margin-bottom:16px}
+.mixer-row{display:flex;align-items:center;gap:8px;padding:6px 0}
+.mixer-row .mixer-label{font-size:12px;color:#aaa;font-family:Inter,system-ui,sans-serif;min-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mixer-row .mixer-label.off{color:#555}
+.mixer-row input[type=range]{flex:1;height:3px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,0.1);border-radius:2px;outline:none;cursor:pointer;min-width:60px}
+.mixer-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#34d399;cursor:pointer;border:2px solid rgba(0,0,0,0.5)}
+.mixer-row input[type=range].disabled-slider{opacity:0.3;pointer-events:none}
+.toggle-switch{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.1);border-radius:22px;transition:0.3s}
+.toggle-slider:before{position:absolute;content:"";height:16px;width:16px;left:3px;bottom:3px;background:#555;border-radius:50%;transition:0.3s}
+.toggle-switch input:checked+.toggle-slider{background:rgba(16,185,129,0.5)}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(18px);background:#34d399}
+.master-row{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.master-row .mixer-label{color:#34d399;font-weight:600}
+
+/* Recording */
+.recorder{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;text-align:center}
+.rec-btn{width:72px;height:72px;border-radius:50%;border:3px solid rgba(239,68,68,0.5);background:rgba(239,68,68,0.15);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all 0.3s;margin-bottom:12px}
+.rec-btn:hover{background:rgba(239,68,68,0.25);transform:scale(1.05)}
+.rec-btn.recording{animation:pulse-rec 1.5s infinite;background:rgba(239,68,68,0.4);border-color:#ef4444}
+.rec-btn .rec-dot{width:24px;height:24px;border-radius:50%;background:#ef4444;transition:all 0.3s}
+.rec-btn.recording .rec-dot{border-radius:4px;width:20px;height:20px}
+@keyframes pulse-rec{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)}50%{box-shadow:0 0 0 15px rgba(239,68,68,0)}}
+.rec-timer{font-size:24px;font-family:'Courier New',monospace;color:#ef4444;margin-bottom:8px;display:none}
+.rec-timer.active{display:block}
+.rec-status{font-size:12px;color:#888;font-family:Inter,system-ui,sans-serif;margin-bottom:16px}
+.rec-canvas{width:100%;height:60px;border-radius:8px;background:rgba(255,255,255,0.03);margin-bottom:16px;display:none}
+.rec-canvas.active{display:block}
+
+/* Playback */
+.playback{display:none;background:rgba(255,255,255,0.03);border:1px solid rgba(16,185,129,0.15);border-radius:12px;padding:16px;margin-top:16px}
+.playback.active{display:block}
+.playback-row{display:flex;align-items:center;gap:12px}
+.playback-btn{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#059669,#10b981);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.playback-btn svg{width:16px;height:16px;fill:white}
+.playback-label{font-size:13px;color:#aaa;font-family:Inter,system-ui,sans-serif;flex:1}
+.re-record{font-size:12px;color:#ef4444;cursor:pointer;font-family:Inter,system-ui,sans-serif;text-decoration:underline;background:none;border:none}
+
+/* Save section */
+.save-section{background:rgba(255,255,255,0.04);border:1px solid rgba(124,58,237,0.2);border-radius:16px;padding:32px;text-align:center}
+.save-section h3{font-size:22px;margin-bottom:8px}
+.save-section p{font-size:13px;color:#888;font-family:Inter,system-ui,sans-serif;margin-bottom:20px}
+.save-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:400px;margin:0 auto 20px}
+.save-input{width:100%;padding:10px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:13px;font-family:Inter,system-ui,sans-serif;outline:none}
+.save-input:focus{border-color:rgba(124,58,237,0.5)}
+.btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-primary{padding:14px 32px;background:linear-gradient(135deg,#7c3aed,#3b82f6);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:600;font-family:Inter,system-ui,sans-serif;cursor:pointer;transition:all 0.3s}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(124,58,237,0.3)}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.btn-secondary{padding:14px 32px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:#aaa;font-size:15px;font-weight:600;font-family:Inter,system-ui,sans-serif;cursor:pointer;transition:all 0.3s}
+.btn-secondary:hover{border-color:rgba(255,255,255,0.3);color:#fff}
+
+/* Thank you */
+.thank-you{display:none;text-align:center;padding:40px 20px}
+.thank-you.active{display:block}
+.thank-you h3{font-size:24px;margin-bottom:12px;color:#a78bfa}
+.thank-you p{font-size:14px;color:#888;font-family:Inter,system-ui,sans-serif;margin-bottom:20px;line-height:1.6}
+.thank-you a{color:#7c3aed;text-decoration:none;font-family:Inter,system-ui,sans-serif}
+
+.footer-jc{text-align:center;padding:60px 0 20px}
+.footer-jc a{font-size:6px;color:rgba(255,255,255,0.08);text-decoration:none;font-family:Inter,system-ui,sans-serif}
+.footer-jc a:hover{color:rgba(255,255,255,0.2)}
+
+@media(max-width:640px){
+  .hero h1{font-size:28px}
+  .preset-grid{grid-template-columns:1fr 1fr}
+  .save-grid{grid-template-columns:1fr}
+  .btn-row{flex-direction:column;align-items:stretch}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<a href="/meditations" class="back">&larr; Back to Meditations</a>
+
+<div class="hero">
+<p class="tag">Create &middot; Record &middot; Share</p>
+<h1>Meditation Maker</h1>
+<p class="subtitle">Choose a frequency background, adjust every layer, record your voiceover, and download your custom meditation.</p>
+</div>
+
+<!-- STEP 1: Title -->
+<div class="step">
+<div class="step-header"><div class="step-num">1</div><span class="step-label">Name Your Meditation</span></div>
+<input type="text" class="title-input" id="medTitle" placeholder="e.g. Morning Clarity, Deep Release, Ceremony Prep...">
+</div>
+
+<!-- STEP 2: Choose Background -->
+<div class="step">
+<div class="step-header"><div class="step-num">2</div><span class="step-label">Choose a Background</span></div>
+
+<p class="cat-label">Nature Soundscapes</p>
+<div class="preset-grid" id="catNature"></div>
+
+<p class="cat-label">Frequency Healing</p>
+<div class="preset-grid" id="catFreq"></div>
+
+<p class="cat-label">Brainwave Entrainment</p>
+<div class="preset-grid" id="catBrain"></div>
+
+<p class="cat-label">Ceremony</p>
+<div class="preset-grid" id="catCeremony"></div>
+
+<!-- Layer mixer -->
+<div class="mixer-panel" id="mixerPanel">
+<p class="mixer-title" id="mixerTitle">Layer Mixer</p>
+<div id="mixerLayers"></div>
+</div>
+</div>
+
+<!-- STEP 3: Record -->
+<div class="step">
+<div class="step-header"><div class="step-num">3</div><span class="step-label">Record Your Voiceover</span></div>
+<div class="recorder">
+<button class="rec-btn" id="recBtn" onclick="toggleRecording()"><div class="rec-dot"></div></button>
+<div class="rec-timer" id="recTimer">0:00</div>
+<p class="rec-status" id="recStatus">Tap to start recording. Background will play while you speak.</p>
+<canvas class="rec-canvas" id="recCanvas"></canvas>
+<div class="playback" id="playbackArea">
+<div class="playback-row">
+<button class="playback-btn" id="playbackBtn" onclick="togglePlayback()">
+<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+</button>
+<span class="playback-label">Your voiceover recording</span>
+<button class="re-record" onclick="reRecord()">Re-record</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- STEP 4: Save -->
+<div class="step">
+<div class="step-header"><div class="step-num">4</div><span class="step-label">Save &amp; Share</span></div>
+<div class="save-section" id="saveSection">
+<h3>Save Your Creation</h3>
+<p>Download for personal use and optionally share with the community on the Meditations page.</p>
+<div class="save-grid">
+<input type="text" class="save-input" id="saveName" placeholder="Your name (optional)">
+<input type="email" class="save-input" id="saveEmail" placeholder="Email (optional)">
+</div>
+<div class="btn-row">
+<button class="btn-primary" id="downloadBtn" onclick="downloadMeditation()">Download Meditation</button>
+<button class="btn-secondary" id="shareBtn" onclick="shareMeditation()">Share with Community</button>
+</div>
+</div>
+<div class="thank-you" id="thankYou">
+<h3>Thank You for Your Interest</h3>
+<p>Someone will contact you shortly. Your meditation has been saved.</p>
+<a href="/meditations">&larr; Back to Meditations</a>
+</div>
+</div>
+
+<div class="footer-jc"><a href="https://jeff-cline.com">JC</a></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// PRESET DEFINITIONS
+// ══════════════════════════════════════════
+const PRESETS = [
+  // NATURE SOUNDSCAPES
+  { id:'gentle-ocean', name:'Gentle Ocean', icon:'🌊', desc:'Soft rolling waves, filtered brown noise', cat:'nature',
+    layers:[
+      {id:'waves',label:'Ocean Waves',type:'noise',noiseType:'brown',gain:0.8,hp:80,lp:900,trem:0.12},
+      {id:'deep',label:'Deep Undertow',type:'noise',noiseType:'brown',gain:0.3,hp:30,lp:200,trem:0.06},
+      {id:'spray',label:'Surf Spray',type:'noise',noiseType:'white',gain:0.15,hp:2000,lp:8000,trem:0.3},
+      {id:'tone',label:'Sub Bass Hum',type:'osc',freq:55,gain:0.15,trem:0.08},
+    ]},
+  { id:'rainfall', name:'Rainfall', icon:'🌧', desc:'Steady rain with distant thunder rumbles', cat:'nature',
+    layers:[
+      {id:'rain',label:'Rain',type:'noise',noiseType:'pink',gain:0.7,hp:400,lp:6000,trem:0.2},
+      {id:'heavy',label:'Heavy Drops',type:'noise',noiseType:'white',gain:0.3,hp:1000,lp:4000,trem:0.8},
+      {id:'thunder',label:'Thunder Rumble',type:'osc',freq:35,gain:0.4,trem:0.05},
+      {id:'wind',label:'Wind',type:'noise',noiseType:'brown',gain:0.25,hp:60,lp:500,trem:0.15},
+    ]},
+  { id:'forest-stream', name:'Forest Stream', icon:'🌿', desc:'Babbling brook, rustling leaves, birdsong', cat:'nature',
+    layers:[
+      {id:'stream',label:'Stream',type:'noise',noiseType:'white',gain:0.4,hp:600,lp:3000,trem:0.4},
+      {id:'leaves',label:'Rustling Leaves',type:'noise',noiseType:'pink',gain:0.2,hp:1500,lp:7000,trem:0.6},
+      {id:'bird1',label:'Bird Song High',type:'osc',freq:2200,gain:0.08,trem:3.0},
+      {id:'bird2',label:'Bird Song Low',type:'osc',freq:1400,gain:0.06,trem:2.5},
+      {id:'earth',label:'Earth Hum',type:'osc',freq:80,gain:0.15,trem:0.05},
+    ]},
+  { id:'desert-wind', name:'Desert Wind', icon:'🏜', desc:'Sweeping wind over sand, deep resonance', cat:'nature',
+    layers:[
+      {id:'wind',label:'Wind Sweep',type:'noise',noiseType:'brown',gain:0.6,hp:100,lp:1200,trem:0.08},
+      {id:'gust',label:'Sand Gusts',type:'noise',noiseType:'pink',gain:0.25,hp:800,lp:4000,trem:0.5},
+      {id:'drone',label:'Desert Drone',type:'osc',freq:110,gain:0.2,trem:0.04},
+      {id:'harmonic',label:'Harmonic Whistle',type:'osc',freq:880,gain:0.05,trem:0.15},
+    ]},
+
+  // FREQUENCY HEALING
+  { id:'hz432', name:'432Hz Harmony', icon:'🎵', desc:'Natural tuning frequency with warm harmonics', cat:'freq',
+    layers:[
+      {id:'root',label:'432Hz Root',type:'osc',freq:432,gain:0.5,trem:0.08},
+      {id:'sub',label:'216Hz Sub',type:'osc',freq:216,gain:0.35,trem:0.06},
+      {id:'over',label:'864Hz Overtone',type:'osc',freq:864,gain:0.2,trem:0.1},
+      {id:'shimmer',label:'Shimmer',type:'osc',freq:1296,gain:0.08,trem:0.15},
+      {id:'bed',label:'Warm Bed',type:'noise',noiseType:'brown',gain:0.1,hp:100,lp:600,trem:0.05},
+    ]},
+  { id:'hz528', name:'528Hz Love', icon:'💚', desc:'Miracle tone for transformation and DNA repair', cat:'freq',
+    layers:[
+      {id:'root',label:'528Hz Root',type:'osc',freq:528,gain:0.5,trem:0.1},
+      {id:'fifth',label:'396Hz Fifth',type:'osc',freq:396,gain:0.25,trem:0.08},
+      {id:'over',label:'1056Hz Overtone',type:'osc',freq:1056,gain:0.15,trem:0.12},
+      {id:'sub',label:'264Hz Sub',type:'osc',freq:264,gain:0.3,trem:0.06},
+      {id:'pad',label:'Warm Pad',type:'noise',noiseType:'brown',gain:0.08,hp:200,lp:800,trem:0.04},
+    ]},
+  { id:'hz396', name:'396Hz Liberation', icon:'🔓', desc:'Release guilt, fear, and emotional blocks', cat:'freq',
+    layers:[
+      {id:'root',label:'396Hz Root',type:'osc',freq:396,gain:0.5,trem:0.08},
+      {id:'sub',label:'99Hz Sub Bass',type:'osc',freq:99,gain:0.35,trem:0.04},
+      {id:'over',label:'792Hz Octave',type:'osc',freq:792,gain:0.2,trem:0.1},
+      {id:'pulse',label:'Slow Pulse',type:'osc',freq:198,gain:0.15,trem:0.5},
+    ]},
+  { id:'hz639', name:'639Hz Connection', icon:'🤝', desc:'Heart chakra, relationships, harmony', cat:'freq',
+    layers:[
+      {id:'root',label:'639Hz Root',type:'osc',freq:639,gain:0.45,trem:0.08},
+      {id:'fifth',label:'Fifth Harmony',type:'osc',freq:426,gain:0.25,trem:0.06},
+      {id:'over',label:'1278Hz Overtone',type:'osc',freq:1278,gain:0.12,trem:0.12},
+      {id:'beat',label:'Gentle Beating',type:'osc',freq:641,gain:0.2,trem:0.1},
+      {id:'bed',label:'Air Bed',type:'noise',noiseType:'pink',gain:0.06,hp:300,lp:1200,trem:0.03},
+    ]},
+
+  // BRAINWAVE ENTRAINMENT
+  { id:'alpha', name:'Alpha Relaxation', icon:'🧘', desc:'10Hz for calm alertness and relaxation', cat:'brain',
+    layers:[
+      {id:'carrier',label:'200Hz Carrier',type:'osc',freq:200,gain:0.4,trem:0.05},
+      {id:'iso',label:'10Hz Isochronic',type:'osc',freq:200,gain:0.35,trem:10.0},
+      {id:'pad',label:'Warm Pad',type:'noise',noiseType:'brown',gain:0.15,hp:100,lp:800,trem:0.08},
+      {id:'harmonic',label:'400Hz Harmonic',type:'osc',freq:400,gain:0.12,trem:0.1},
+    ]},
+  { id:'theta', name:'Theta Deep', icon:'🌙', desc:'6Hz for deep meditation and insight', cat:'brain',
+    layers:[
+      {id:'carrier',label:'150Hz Carrier',type:'osc',freq:150,gain:0.4,trem:0.04},
+      {id:'mono',label:'6Hz Monaural',type:'osc',freq:150,gain:0.35,trem:6.0},
+      {id:'sub',label:'75Hz Sub',type:'osc',freq:75,gain:0.2,trem:0.03},
+      {id:'bed',label:'Deep Bed',type:'noise',noiseType:'brown',gain:0.12,hp:60,lp:400,trem:0.06},
+    ]},
+  { id:'delta', name:'Delta Sleep', icon:'😴', desc:'2Hz ultra-slow pulse for deep sleep', cat:'brain',
+    layers:[
+      {id:'carrier',label:'100Hz Carrier',type:'osc',freq:100,gain:0.35,trem:0.03},
+      {id:'pulse',label:'2Hz Pulse',type:'osc',freq:100,gain:0.3,trem:2.0},
+      {id:'sub',label:'50Hz Sub Drone',type:'osc',freq:50,gain:0.25,trem:0.02},
+      {id:'bed',label:'Noise Blanket',type:'noise',noiseType:'brown',gain:0.2,hp:40,lp:300,trem:0.04},
+    ]},
+  { id:'gamma', name:'Gamma Focus', icon:'⚡', desc:'40Hz for peak focus and cognitive boost', cat:'brain',
+    layers:[
+      {id:'carrier',label:'300Hz Carrier',type:'osc',freq:300,gain:0.35,trem:0.05},
+      {id:'iso',label:'40Hz Isochronic',type:'osc',freq:300,gain:0.3,trem:40.0},
+      {id:'high',label:'600Hz Clarity',type:'osc',freq:600,gain:0.15,trem:0.1},
+      {id:'bright',label:'Bright Air',type:'noise',noiseType:'white',gain:0.06,hp:3000,lp:8000,trem:0.2},
+    ]},
+
+  // CEREMONY
+  { id:'power444', name:'Power 444', icon:'🔥', desc:'Full ceremony: ocean, drums, bowls, chanting, solfeggio', cat:'ceremony',
+    layers:[
+      {id:'waves',label:'Ocean Waves',type:'noise',noiseType:'brown',gain:0.12,hp:80,lp:900,trem:0.12},
+      {id:'crash',label:'Wave Crashes',type:'noise',noiseType:'white',gain:0.45,hp:200,lp:5000,trem:0.8},
+      {id:'drums',label:'Ceremony Drums',type:'osc',freq:55,gain:0.38,trem:1.3},
+      {id:'drums2',label:'High Drums',type:'osc',freq:82,gain:0.3,trem:2.6},
+      {id:'bowls',label:'Singing Bowls',type:'osc',freq:528,gain:0.5,trem:0.1},
+      {id:'chant',label:'Tribal Chanting',type:'osc',freq:110,gain:0.14,trem:0.3},
+      {id:'chant2',label:'Chant Harmonics',type:'osc',freq:220,gain:0.08,trem:0.25},
+      {id:'solf',label:'Solfeggio 417',type:'osc',freq:417,gain:0.5,trem:0.08},
+      {id:'solf2',label:'Solfeggio 432',type:'osc',freq:432,gain:0.4,trem:0.08},
+      {id:'om',label:'Om Drone 136Hz',type:'osc',freq:136.1,gain:0.28,trem:0.06},
+      {id:'iso',label:'Isochronic Theta',type:'osc',freq:200,gain:0.5,trem:6.0},
+      {id:'mono',label:'4Hz Monaural',type:'osc',freq:200,gain:0.5,trem:4.0},
+    ]},
+  { id:'sacred-fire', name:'Sacred Fire', icon:'🪔', desc:'Crackling fire, deep drums, 417Hz sacral tones', cat:'ceremony',
+    layers:[
+      {id:'fire',label:'Fire Crackle',type:'noise',noiseType:'white',gain:0.35,hp:1500,lp:6000,trem:1.5},
+      {id:'embers',label:'Embers Hum',type:'noise',noiseType:'brown',gain:0.2,hp:40,lp:200,trem:0.08},
+      {id:'drums',label:'Deep Drums',type:'osc',freq:55,gain:0.45,trem:1.3},
+      {id:'sacral',label:'417Hz Sacral',type:'osc',freq:417,gain:0.4,trem:0.1},
+      {id:'chant',label:'Fire Chanting',type:'osc',freq:130.8,gain:0.2,trem:0.3},
+      {id:'chant2',label:'Chant Overtone',type:'osc',freq:261.6,gain:0.1,trem:0.25},
+      {id:'drone',label:'Earth Drone',type:'osc',freq:73.4,gain:0.25,trem:0.04},
+    ]},
+];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let selectedPreset = null;
+let audioCtx = null;
+let activeNodes = {};     // {layerId: {gain, src/osc}}
+let masterGain = null;
+let layerState = {};      // {layerId: {on, vol(actual), sliderVal}}
+let previewPlaying = false;
+let bgPlaying = false;
+
+// Recording state
+let mediaStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordingBlob = null;
+let recordingUrl = null;
+let recStartTime = 0;
+let recTimerInterval = null;
+let analyser = null;
+let recCanvasCtx = null;
+let recAnimFrame = null;
+
+// ══════════════════════════════════════════
+// BUILD PRESET CARDS
+// ══════════════════════════════════════════
+function buildPresetCards() {
+  const cats = {nature:'catNature', freq:'catFreq', brain:'catBrain', ceremony:'catCeremony'};
+  PRESETS.forEach(p => {
+    const grid = document.getElementById(cats[p.cat]);
+    if (!grid) return;
+    const card = document.createElement('div');
+    card.className = 'preset-card';
+    card.id = 'card-' + p.id;
+    card.innerHTML = '<div class="preset-icon">' + p.icon + '</div>' +
+      '<div class="preset-name">' + p.name + '</div>' +
+      '<div class="preset-desc">' + p.desc + '</div>' +
+      '<div class="preview-btn" id="prev-' + p.id + '" onclick="event.stopPropagation();togglePreview(\'' + p.id + '\')">Preview</div>';
+    card.onclick = function() { selectPreset(p.id); };
+    grid.appendChild(card);
+  });
+}
+buildPresetCards();
+
+// ══════════════════════════════════════════
+// WEB AUDIO ENGINE
+// ══════════════════════════════════════════
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function createNoiseBuffer(actx, seconds, type) {
+  const sr = actx.sampleRate;
+  const len = sr * seconds;
+  const buf = actx.createBuffer(1, len, sr);
+  const data = buf.getChannelData(0);
+  if (type === 'brown') {
+    let last = 0;
+    for (let i = 0; i < len; i++) { const w = Math.random()*2-1; last = (last + 0.02*w)/1.02; data[i] = last*3.5; }
+  } else if (type === 'pink') {
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for (let i = 0; i < len; i++) {
+      const w = Math.random()*2-1;
+      b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759;
+      b2=0.96900*b2+w*0.1538520; b3=0.86650*b3+w*0.3104856;
+      b4=0.55000*b4+w*0.5329522; b5=-0.7616*b5-w*0.0168980;
+      data[i] = (b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11;
+      b6 = w*0.115926;
+    }
+  } else { // white
+    for (let i = 0; i < len; i++) data[i] = Math.random()*2-1;
+  }
+  return buf;
+}
+
+function startBackground(preset) {
+  stopBackground();
+  const actx = getAudioCtx();
+  masterGain = actx.createGain();
+  masterGain.gain.value = 1.0;
+  masterGain.connect(actx.destination);
+  activeNodes = {};
+  layerState = {};
+
+  preset.layers.forEach(l => {
+    const layerGain = actx.createGain();
+    layerGain.gain.value = l.gain;
+    layerGain.connect(masterGain);
+    layerState[l.id] = { on: true, vol: l.gain, sliderVal: 100 };
+
+    if (l.type === 'noise') {
+      const buf = createNoiseBuffer(actx, 600, l.noiseType || 'brown');
+      const src = actx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      let lastNode = src;
+      if (l.hp) { const f = actx.createBiquadFilter(); f.type='highpass'; f.frequency.value=l.hp; lastNode.connect(f); lastNode=f; }
+      if (l.lp) { const f = actx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=l.lp; lastNode.connect(f); lastNode=f; }
+      lastNode.connect(layerGain);
+      src.start(0);
+      // LFO tremolo
+      if (l.trem && l.trem > 0) {
+        const lfo = actx.createOscillator(); const lg = actx.createGain();
+        lfo.type='sine'; lfo.frequency.value=l.trem; lg.gain.value=l.gain*0.5;
+        lfo.connect(lg); lg.connect(layerGain.gain); lfo.start(0);
+      }
+      activeNodes[l.id] = { gain: layerGain, src };
+    } else {
+      const osc = actx.createOscillator();
+      osc.type = 'sine'; osc.frequency.value = l.freq;
+      osc.connect(layerGain);
+      osc.start(0);
+      if (l.trem && l.trem > 0) {
+        const lfo = actx.createOscillator(); const lg = actx.createGain();
+        lfo.type='sine'; lfo.frequency.value=l.trem; lg.gain.value=l.gain*0.5;
+        lfo.connect(lg); lg.connect(layerGain.gain); lfo.start(0);
+      }
+      activeNodes[l.id] = { gain: layerGain, osc };
+    }
+  });
+  bgPlaying = true;
+}
+
+function stopBackground() {
+  if (!audioCtx) return;
+  Object.keys(activeNodes).forEach(k => {
+    try { if (activeNodes[k].osc) activeNodes[k].osc.stop(); } catch(e){}
+    try { if (activeNodes[k].src) activeNodes[k].src.stop(); } catch(e){}
+    try { activeNodes[k].gain.disconnect(); } catch(e){}
+  });
+  if (masterGain) try { masterGain.disconnect(); } catch(e){}
+  activeNodes = {};
+  masterGain = null;
+  bgPlaying = false;
+}
+
+// ══════════════════════════════════════════
+// PRESET SELECTION & MIXER
+// ══════════════════════════════════════════
+function selectPreset(id) {
+  stopBackground();
+  // Update card selection
+  document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('card-' + id);
+  if (card) card.classList.add('selected');
+
+  selectedPreset = PRESETS.find(p => p.id === id);
+  if (!selectedPreset) return;
+
+  // Build mixer
+  const panel = document.getElementById('mixerPanel');
+  const layers = document.getElementById('mixerLayers');
+  document.getElementById('mixerTitle').textContent = selectedPreset.name + ' — Layer Mixer';
+  layers.innerHTML = '';
+
+  // Master vol
+  const mrow = document.createElement('div');
+  mrow.className = 'mixer-row master-row';
+  mrow.innerHTML = '<span class="mixer-label">Master Vol</span>' +
+    '<input type="range" min="1" max="300" value="100" oninput="setMasterVol(this.value/100)">';
+  layers.appendChild(mrow);
+
+  // Per-layer rows
+  selectedPreset.layers.forEach(l => {
+    const row = document.createElement('div');
+    row.className = 'mixer-row';
+    row.innerHTML = '<span class="mixer-label" id="ml-' + l.id + '">' + l.label + '</span>' +
+      '<input type="range" min="1" max="300" value="100" data-layer="' + l.id + '" ' +
+      'oninput="setLayerVol(\'' + l.id + '\',' + l.gain + ',this.value)">' +
+      '<label class="toggle-switch"><input type="checkbox" checked data-toggle="' + l.id + '" ' +
+      'onchange="toggleLayer(\'' + l.id + '\',this.checked)"><span class="toggle-slider"></span></label>';
+    layers.appendChild(row);
+  });
+
+  panel.classList.add('active');
+
+  // Start audio
+  startBackground(selectedPreset);
+}
+
+function setMasterVol(val) {
+  if (masterGain) masterGain.gain.setValueAtTime(val, audioCtx.currentTime);
+}
+
+function setLayerVol(id, defGain, sliderVal) {
+  const actual = Math.min(1.0, defGain * (sliderVal / 100));
+  if (layerState[id]) { layerState[id].vol = actual; layerState[id].sliderVal = sliderVal; }
+  if (activeNodes[id] && activeNodes[id].gain && layerState[id] && layerState[id].on) {
+    activeNodes[id].gain.gain.setValueAtTime(actual, audioCtx.currentTime);
+  }
+}
+
+function toggleLayer(id, on) {
+  if (layerState[id]) layerState[id].on = on;
+  const label = document.getElementById('ml-' + id);
+  if (label) label.classList.toggle('off', !on);
+  const slider = document.querySelector('input[data-layer="' + id + '"]');
+  if (slider) slider.classList.toggle('disabled-slider', !on);
+  if (activeNodes[id] && activeNodes[id].gain) {
+    activeNodes[id].gain.gain.setValueAtTime(on ? (layerState[id] ? layerState[id].vol : 0.5) : 0, audioCtx.currentTime);
+  }
+}
+
+function togglePreview(id) {
+  const preset = PRESETS.find(p => p.id === id);
+  if (!preset) return;
+  const btn = document.getElementById('prev-' + id);
+  if (previewPlaying && selectedPreset && selectedPreset.id === id) {
+    stopBackground();
+    previewPlaying = false;
+    btn.textContent = 'Preview';
+    btn.classList.remove('playing');
+    return;
+  }
+  // Stop any playing preview
+  document.querySelectorAll('.preview-btn').forEach(b => { b.textContent='Preview'; b.classList.remove('playing'); });
+  selectPreset(id);
+  previewPlaying = true;
+  btn.textContent = 'Stop';
+  btn.classList.add('playing');
+}
+
+// ══════════════════════════════════════════
+// VOICEOVER RECORDING
+// ══════════════════════════════════════════
+async function toggleRecording() {
+  const btn = document.getElementById('recBtn');
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    // Stop
+    mediaRecorder.stop();
+    btn.classList.remove('recording');
+    clearInterval(recTimerInterval);
+    cancelAnimationFrame(recAnimFrame);
+    document.getElementById('recStatus').textContent = 'Recording saved. Play it back or re-record.';
+    document.getElementById('recCanvas').classList.remove('active');
+    document.getElementById('recTimer').classList.remove('active');
+    return;
+  }
+
+  // Request mic
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch(e) {
+    document.getElementById('recStatus').textContent = 'Microphone access denied. Please allow mic access and try again.';
+    return;
+  }
+
+  // Start background if not playing
+  if (!bgPlaying && selectedPreset) startBackground(selectedPreset);
+
+  // Setup analyser for waveform
+  const actx = getAudioCtx();
+  const micSource = actx.createMediaStreamSource(mediaStream);
+  analyser = actx.createAnalyser();
+  analyser.fftSize = 256;
+  micSource.connect(analyser);
+
+  // Start recorder
+  recordedChunks = [];
+  mediaRecorder = new MediaRecorder(mediaStream);
+  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = () => {
+    recordingBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+    if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+    recordingUrl = URL.createObjectURL(recordingBlob);
+    document.getElementById('playbackArea').classList.add('active');
+    if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+  };
+  mediaRecorder.start();
+
+  btn.classList.add('recording');
+  recStartTime = Date.now();
+  document.getElementById('recTimer').classList.add('active');
+  document.getElementById('recCanvas').classList.add('active');
+  document.getElementById('recStatus').textContent = 'Recording... speak now.';
+
+  // Timer
+  recTimerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+    const m = Math.floor(elapsed/60), s = elapsed%60;
+    document.getElementById('recTimer').textContent = m + ':' + (s<10?'0':'') + s;
+  }, 200);
+
+  // Waveform
+  const canvas = document.getElementById('recCanvas');
+  recCanvasCtx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = canvas.offsetHeight * 2;
+  drawWaveform();
+}
+
+function drawWaveform() {
+  if (!analyser) return;
+  const canvas = document.getElementById('recCanvas');
+  const ctx = recCanvasCtx;
+  const w = canvas.width, h = canvas.height;
+  const bufLen = analyser.frequencyBinCount;
+  const data = new Uint8Array(bufLen);
+  analyser.getByteTimeDomainData(data);
+
+  ctx.fillStyle = 'rgba(10,10,15,0.3)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#ef4444';
+  ctx.beginPath();
+  const sliceWidth = w / bufLen;
+  let x = 0;
+  for (let i = 0; i < bufLen; i++) {
+    const v = data[i] / 128.0;
+    const y = v * h / 2;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    x += sliceWidth;
+  }
+  ctx.lineTo(w, h/2);
+  ctx.stroke();
+  recAnimFrame = requestAnimationFrame(drawWaveform);
+}
+
+let playbackAudio = null;
+function togglePlayback() {
+  if (!recordingUrl) return;
+  if (playbackAudio && !playbackAudio.paused) {
+    playbackAudio.pause();
+    document.getElementById('playbackBtn').innerHTML = '<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>';
+    return;
+  }
+  // Play background + voiceover together
+  if (!bgPlaying && selectedPreset) startBackground(selectedPreset);
+  playbackAudio = new Audio(recordingUrl);
+  playbackAudio.play();
+  document.getElementById('playbackBtn').innerHTML = '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" fill="white"/><rect x="14" y="4" width="4" height="16" fill="white"/></svg>';
+  playbackAudio.onended = () => {
+    document.getElementById('playbackBtn').innerHTML = '<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>';
+  };
+}
+
+function reRecord() {
+  if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
+  if (recordingUrl) { URL.revokeObjectURL(recordingUrl); recordingUrl = null; }
+  recordingBlob = null;
+  recordedChunks = [];
+  document.getElementById('playbackArea').classList.remove('active');
+  document.getElementById('recStatus').textContent = 'Tap to start recording. Background will play while you speak.';
+  document.getElementById('recTimer').textContent = '0:00';
+}
+
+// ══════════════════════════════════════════
+// SAVE & DOWNLOAD
+// ══════════════════════════════════════════
+function downloadMeditation() {
+  if (!recordingBlob && !bgPlaying) {
+    alert('Record a voiceover or select a background first.');
+    return;
+  }
+  const title = document.getElementById('medTitle').value.trim() || 'meditation';
+  const filename = title.replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  // Download voiceover recording
+  if (recordingBlob) {
+    const a = document.createElement('a');
+    a.href = recordingUrl;
+    a.download = filename + '_voiceover.webm';
+    a.click();
+  }
+  // Note: full mix rendering would require OfflineAudioContext -- for now we download the voiceover
+  // The user plays background + voiceover together
+}
+
+async function shareMeditation() {
+  const title = document.getElementById('medTitle').value.trim();
+  const name = document.getElementById('saveName').value.trim();
+  const email = document.getElementById('saveEmail').value.trim();
+
+  if (!title) { alert('Please name your meditation first.'); return; }
+  if (!selectedPreset) { alert('Please select a background track.'); return; }
+
+  const btn = document.getElementById('shareBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sharing...';
+
+  // Submit lead to CRM
+  try {
+    await fetch('https://jeff-cline.com/api/todo/webhook/lead-ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CRM-Key': 'jc-crm-2024' },
+      body: JSON.stringify({
+        source: 'jeff-cline.com/meditation-maker',
+        leadType: 'MEDITATION_MAKER',
+        name: name || 'Anonymous',
+        email: email || '',
+        notes: 'Meditation: "' + title + '" | Background: ' + selectedPreset.name + ' | Has voiceover: ' + (recordingBlob ? 'Yes' : 'No'),
+        tags: ['meditation-maker', 'community-meditation']
+      })
+    });
+  } catch(e) { console.log('Lead submit error:', e); }
+
+  // Show thank you
+  stopBackground();
+  document.getElementById('saveSection').style.display = 'none';
+  document.getElementById('thankYou').classList.add('active');
+
+  // Also trigger download
+  downloadMeditation();
+}
+</script>
+</body>
+</html>

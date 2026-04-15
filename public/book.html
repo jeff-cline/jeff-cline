@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book Time with Jeff Cline</title>
+  <meta name="description" content="Schedule a strategy session with Jeff Cline. Pick a time that works for you.">
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0A0A0A; color: #fff; font-family: system-ui, -apple-system, sans-serif; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; border-bottom: 1px solid #222; }
+    .logo { color: #FF8900; font-weight: 900; font-size: 1.2rem; text-decoration: none; letter-spacing: 1px; }
+    .logo span { color: #DC2626; }
+    .nav a { color: #999; text-decoration: none; margin-left: 24px; font-size: 0.9rem; }
+    .nav a:hover { color: #fff; }
+    .hero { text-align: center; padding: 80px 20px 40px; max-width: 800px; margin: 0 auto; }
+    .hero .tag { color: #DC2626; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 16px; }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1.1; margin-bottom: 20px; }
+    .hero h1 span { color: #FF8900; }
+    .hero p { color: #888; font-size: 1.1rem; max-width: 600px; margin: 0 auto; line-height: 1.6; }
+    .cal-wrapper { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+    #cal-inline { width: 100%; min-height: 700px; overflow: auto; border-radius: 12px; }
+    .footer-note { text-align: center; padding: 40px 20px; color: #555; font-size: 0.85rem; }
+    .site-footer { border-top: 1px solid #222; padding: 32px 20px; text-align: center; color: #555; font-size: 0.8rem; }
+    .site-footer a { color: #555; text-decoration: none; }
+    .jc { font-size: 6px; opacity: 0.08; text-decoration: none; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="/" class="logo"><span>JEFF</span> CLINE</a>
+    <div class="nav">
+      <a href="/business">Business</a>
+      <a href="/entrepreneur">Entrepreneur</a>
+      <a href="/tools">Tools</a>
+      <a href="/quiz">Quiz</a>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="tag">Limited Availability</div>
+    <h1>Book Time with <span>Jeff Cline</span></h1>
+    <p>Whether you need a quick strategy call or a deep-dive session, pick a time that works for you. No gatekeepers. No forms. Just pick a slot.</p>
+  </div>
+
+  <div class="cal-wrapper">
+    <div id="cal-inline"></div>
+  </div>
+
+  <div class="footer-note">
+    All meetings include a calendar invite with video call link. Timezone is automatically detected.
+  </div>
+
+  <div class="site-footer">
+    &copy; 2026 Jeff Cline. PROFIT AT SCALE. <a href="https://jeff-cline.com" class="jc">JC</a>
+  </div>
+
+  <script type="text/javascript">
+    (function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if(typeof namespace === "string"){cal.ns[namespace] = cal.ns[namespace] || api;p(cal.ns[namespace], ar);p(cal, ["initNamespace", namespace]);} else p(cal, ar); return;} p(cal, ar); }; })(window, "https://app.cal.com/embed/embed.js", "init");
+    Cal("init", {origin:"https://cal.com"});
+    Cal("inline", {elementOrSelector:"#cal-inline", calLink: "jeffcline", layout: "month_view", config: {theme: "dark"}});
+    Cal("ui", {theme: "dark", styles: {branding: {brandColor: "#FF8900"}}, hideEventTypeDetails: false, layout: "month_view"});
+  </script>
+</body>
+</html>

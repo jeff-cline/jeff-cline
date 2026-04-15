@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeff Cline | Agency Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* Dashboard-specific additions */
+    .api-status { display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; padding:4px 10px; border-radius:100px; }
+    .api-connected { background:rgba(16,185,129,0.1); color:var(--accent-green); }
+    .api-disconnected { background:rgba(239,68,68,0.1); color:var(--accent-red); }
+    .loading-spinner { display:inline-block; width:16px; height:16px; border:2px solid var(--border-color); border-top-color:var(--accent-blue); border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .results-loading { text-align:center; padding:60px 20px; color:var(--text-muted); }
+    .results-loading .loading-spinner { width:32px; height:32px; border-width:3px; margin-bottom:16px; }
+    .results-empty { text-align:center; padding:60px 20px; color:var(--text-muted); }
+    .tool-input-row { display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
+    .tool-input-row .form-input, .tool-input-row .form-select { flex:1; min-width:200px; }
+    .tool-input-row .btn { flex-shrink:0; }
+    .tab-nav { display:flex; gap:2px; background:var(--bg-input); border-radius:var(--radius-sm); padding:4px; margin-bottom:24px; flex-wrap:wrap; }
+    .tab-nav-btn { padding:8px 16px; border-radius:6px; font-size:0.85rem; font-weight:500; cursor:pointer; transition:var(--transition); border:none; background:none; color:var(--text-secondary); white-space:nowrap; }
+    .tab-nav-btn.active { background:var(--accent-blue); color:white; }
+    .tab-nav-btn:hover:not(.active) { color:var(--text-primary); }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+    .serp-item { padding:16px; background:var(--bg-input); border-radius:var(--radius-sm); margin-bottom:8px; }
+    .serp-item-url { font-size:0.8rem; color:var(--accent-green); word-break:break-all; }
+    .serp-item-title { font-weight:600; color:var(--accent-blue); margin:4px 0; }
+    .serp-item-desc { font-size:0.85rem; color:var(--text-secondary); }
+    .serp-pos { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:6px; font-weight:700; font-size:0.8rem; margin-right:12px; flex-shrink:0; }
+    .serp-pos-top { background:rgba(16,185,129,0.15); color:var(--accent-green); }
+    .serp-pos-mid { background:rgba(245,158,11,0.15); color:var(--accent-gold); }
+    .serp-pos-low { background:rgba(239,68,68,0.15); color:var(--accent-red); }
+    .onboard-overlay { position:fixed; inset:0; background:rgba(10,15,30,0.95); z-index:9999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(10px); }
+    .onboard-card { background:var(--gradient-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:48px; max-width:560px; width:90%; position:relative; }
+    .onboard-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:var(--gradient-premium); border-radius:var(--radius-lg) var(--radius-lg) 0 0; }
+    .mono { font-family:'JetBrains Mono', monospace; }
+    .truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:300px; }
+    .backlink-dofollow { color:var(--accent-green); font-weight:600; }
+    .backlink-nofollow { color:var(--accent-red); }
+    /* Super Admin modal for SEO API credentials */
+    .sa-modal-overlay { position:fixed; inset:0; background:rgba(10,15,30,0.85); z-index:9998; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px); animation:saFadeIn 0.2s ease; }
+    @keyframes saFadeIn { from { opacity:0; } to { opacity:1; } }
+    .sa-modal-card { background:var(--gradient-card); border:1px solid var(--accent-gold); border-radius:var(--radius-lg); padding:32px; max-width:480px; width:90%; position:relative; animation:saSlideUp 0.25s ease; }
+    @keyframes saSlideUp { from { transform:translateY(24px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+    .sa-modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .sa-modal-close { background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer; line-height:1; padding:4px 8px; border-radius:6px; transition:var(--transition); }
+    .sa-modal-close:hover { color:var(--text-primary); background:var(--bg-input); }
+  </style>
+</head>
+<body>
+
+  <!-- ===== LOGIN OVERLAY ===== -->
+  <div class="onboard-overlay" id="loginOverlay" style="display:flex;">
+    <div class="onboard-card">
+      <div style="text-align:center; margin-bottom:32px;">
+        <div style="font-size:3rem; margin-bottom:12px;">&#9883;</div>
+        <a href="https://jeff-cline.com" style="text-decoration:none; display:block; margin-bottom:8px;">
+          <span style="font-size:1.4rem; font-weight:900; letter-spacing:0.05em;"><span style="color:#FF8900;">JEFF</span> <span style="color:#DC2626;">CLINE</span></span>
+        </a>
+        <h2>Agency Dashboard</h2>
+        <p style="color:var(--text-secondary); margin-top:8px;">Sign in to access your SEO/AEO tools and analytics.</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="loginEmail" placeholder="your@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="loginPassword" placeholder="Your password" autocomplete="current-password">
+      </div>
+      <div id="loginError" style="color:var(--accent-red); font-size:0.85rem; margin-bottom:16px; display:none;"></div>
+      <button class="btn btn-primary w-full" onclick="doLogin()" id="loginBtn">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </button>
+
+      <!-- Help text -->
+      <div style="margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.08); text-align:center;">
+        <p style="color:#94a3b8; font-size:0.85rem; line-height:1.6; margin:0;">
+          If you need assistance or to create an account @ Jeff Cline, please text
+          <strong style="color:#FF8900;">"NEED HELP"</strong> to
+          <a href="sms:2234008146&body=NEED%20HELP" style="color:#FF8900; text-decoration:none; font-weight:600;">223-400-8146</a>
+          and our team will get back to you as quickly as possible.
+        </p>
+      </div>
+
+      <!-- Related Topics for Scale -->
+      <div style="margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.08);">
+        <p style="color:#FF8900; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:12px; text-align:center;">Related Topics for Scale</p>
+        <div style="display:flex; flex-wrap:wrap; gap:6px 12px; justify-content:center;">
+          <a href="/about" style="color:#64748b; font-size:0.75rem; text-decoration:none; transition:color 0.2s;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">About</a>
+          <a href="/portfolio" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Portfolio</a>
+          <a href="/blog" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Blog</a>
+          <a href="/resources" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Resources</a>
+          <a href="/tools" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Tools</a>
+          <a href="/contact" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Contact</a>
+          <a href="/quiz" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Quiz</a>
+          <a href="/tools-a-la-carte" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Tools &amp; Services Pricing</a>
+          <a href="/one-click-demo" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">One-Click Demo</a>
+          <a href="/pay-per-click" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">PPC Management</a>
+          <a href="/fast-start" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Fast Start Program</a>
+          <a href="/billionaires-club" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Billionaires Club</a>
+          <a href="/portfolio-companies" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Portfolio Companies</a>
+          <a href="/investment-calculator" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Investment Calculator</a>
+          <a href="/agency/index.html" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Agency Services</a>
+          <a href="/privacy" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Privacy</a>
+          <a href="/terms" style="color:#64748b; font-size:0.75rem; text-decoration:none;" onmouseover="this.style.color='#FF8900'" onmouseout="this.style.color='#64748b'">Terms</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-layout">
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="index.html" class="sidebar-logo" style="text-decoration:none; color:inherit;">&#9883;</a>
+        <div class="sidebar-brand">
+          Jeff Cline
+          <small>Agency Dashboard</small>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Main</div>
+          <button class="sidebar-link active" onclick="switchPage('overview', this)">
+            <i class="fas fa-gauge-high"></i> Overview
+          </button>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">SEO / AEO Tools</div>
+          <button class="sidebar-link" onclick="switchPage('keyword-research', this)">
+            <i class="fas fa-key"></i> Keyword Research
+          </button>
+          <button class="sidebar-link" onclick="switchPage('backlinks', this)">
+            <i class="fas fa-link"></i> Backlink Analyzer
+          </button>
+          <button class="sidebar-link" onclick="switchPage('domain-analysis', this)">
+            <i class="fas fa-globe"></i> Domain Analysis
+          </button>
+          <button class="sidebar-link" onclick="switchPage('serp-tracker', this)">
+            <i class="fas fa-ranking-star"></i> SERP Tracker
+          </button>
+          <button class="sidebar-link" onclick="switchPage('competitors', this)">
+            <i class="fas fa-chess"></i> Competitor Analysis
+          </button>
+          <button class="sidebar-link" onclick="switchPage('site-audit', this)">
+            <i class="fas fa-stethoscope"></i> Site Audit
+          </button>
+          <button class="sidebar-link" onclick="switchPage('aeo', this)">
+            <i class="fas fa-robot"></i> AEO Optimization
+          </button>
+          <button class="sidebar-link" onclick="switchPage('content-silos', this)">
+            <i class="fas fa-sitemap"></i> Content Silos
+          </button>
+          <button class="sidebar-link" onclick="switchPage('website-builder', this)">
+            <i class="fas fa-wand-magic-sparkles"></i> Website Builder
+          </button>
+          <button class="sidebar-link" onclick="switchPage('marketing-builder', this)">
+            <i class="fas fa-building"></i> Marketing Site Builder
+          </button>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Clients &amp; Reports</div>
+          <button class="sidebar-link" onclick="switchPage('clients', this)">
+            <i class="fas fa-users"></i> Clients
+          </button>
+          <button class="sidebar-link" onclick="switchPage('reports', this)">
+            <i class="fas fa-chart-pie"></i> Reports
+          </button>
+          <button class="sidebar-link" onclick="switchPage('leads', this)">
+            <i class="fas fa-funnel-dollar"></i> Leads
+          </button>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Advertising</div>
+          <button class="sidebar-link" onclick="switchPage('paid-ads', this)">
+            <i class="fas fa-bullseye"></i> Paid Ads
+          </button>
+          <button class="sidebar-link" onclick="switchPage('tv-ads', this)">
+            <i class="fas fa-tv"></i> TV / CTV
+          </button>
+          <button class="sidebar-link" onclick="switchPage('tracking', this)">
+            <i class="fas fa-crosshairs"></i> Tracking Pixels
+          </button>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Admin</div>
+          <button class="sidebar-link" onclick="switchPage('expenses', this)">
+            <i class="fas fa-receipt"></i> Real-Time Expenses
+          </button>
+          <button class="sidebar-link" onclick="switchPage('integrations', this)">
+            <i class="fas fa-plug"></i> Integrations
+          </button>
+          <button class="sidebar-link" onclick="switchPage('settings', this)">
+            <i class="fas fa-gear"></i> Settings
+          </button>
+        </div>
+
+        <div class="sidebar-section" id="superAdminSection" style="display:none;">
+          <div class="sidebar-section-title">Super Admin</div>
+          <button class="sidebar-link" onclick="switchPage('super-admin', this)">
+            <i class="fas fa-shield-halved"></i> Admin Panel
+          </button>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div id="apiStatusSidebar" style="padding:8px 12px;">
+          <!-- filled by JS -->
+        </div>
+        <div class="sidebar-user">
+          <div class="sidebar-user-avatar" id="userAvatar">--</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name" id="userName">Loading...</div>
+            <div class="sidebar-user-role" id="userRole">--</div>
+          </div>
+          <button class="topbar-icon-btn" onclick="doLogout()" title="Sign Out" style="margin-left:auto;">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="topbar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+            <i class="fas fa-bars"></i>
+          </button>
+          <div class="topbar-breadcrumb">
+            <span>Dashboard</span> / <strong id="pageTitle">Overview</strong>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="topbar-search">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search anything...">
+          </div>
+          <div id="creditBadge" style="display:none; cursor:pointer;" onclick="onCreditBadgeClick()" title="Monthly dollar usage">
+            <span class="api-status" style="background:rgba(59,130,246,0.1); color:var(--accent-blue); font-weight:600; font-size:0.8rem; gap:6px;">
+              <span id="creditBadgeText">-- / --</span>
+            </span>
+          </div>
+          <div id="apiStatusTop"></div>
+          <button class="topbar-icon-btn">
+            <i class="fas fa-bell"></i>
+            <span class="notification-dot"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="dash-content">
+
+        <!-- ==================== OVERVIEW ==================== -->
+        <div class="dash-page active" id="page-overview">
+          <div class="dash-page-header">
+            <div>
+              <h2>Welcome back, Jeff &#9883;</h2>
+              <p>Here's what's happening across all your businesses today.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-sm btn-outline"><i class="fas fa-download"></i> Export</button>
+              <button class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> New Client</button>
+            </div>
+          </div>
+          <div class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-label"><span>Organic Traffic (Est.)</span><div class="card-icon card-icon-gold" style="width:36px;height:36px;font-size:0.9rem;"><i class="fas fa-chart-line"></i></div></div><div class="kpi-value" id="ovOrgTraffic"><span class="text-muted" style="font-size:0.85rem;">Loading...</span></div><div class="kpi-change" id="ovOrgTrafficSub" style="opacity:0.5;">live data</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Organic Keywords</span><div class="card-icon card-icon-purple" style="width:36px;height:36px;font-size:0.9rem;"><i class="fas fa-key"></i></div></div><div class="kpi-value" id="ovOrgKeywords"><span class="text-muted" style="font-size:0.85rem;">Loading...</span></div><div class="kpi-change" id="ovOrgKeywordsSub" style="opacity:0.5;">live data</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Traffic Cost (Est.)</span><div class="card-icon card-icon-green" style="width:36px;height:36px;font-size:0.9rem;"><i class="fas fa-dollar-sign"></i></div></div><div class="kpi-value" id="ovTrafficCost"><span class="text-muted" style="font-size:0.85rem;">Loading...</span></div><div class="kpi-change" id="ovTrafficCostSub" style="opacity:0.5;">live data</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Backlinks</span><div class="card-icon card-icon-blue" style="width:36px;height:36px;font-size:0.9rem;"><i class="fas fa-link"></i></div></div><div class="kpi-value" id="ovBacklinks"><span class="text-muted" style="font-size:0.85rem;">Loading...</span></div><div class="kpi-change" id="ovBacklinksSub" style="opacity:0.5;">live data</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Referring Domains</span><div class="card-icon card-icon-cyan" style="width:36px;height:36px;font-size:0.9rem;"><i class="fas fa-globe"></i></div></div><div class="kpi-value" id="ovRefDomains"><span class="text-muted" style="font-size:0.85rem;">Loading...</span></div><div class="kpi-change" id="ovRefDomainsSub" style="opacity:0.5;">live data</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Domain Rank</span><div class="card-icon card-icon-red" style="width:36px;height:36px;font-size:0.9rem;"><i class="fas fa-ranking-star"></i></div></div><div class="kpi-value" id="ovDomainRank"><span class="text-muted" style="font-size:0.85rem;">Loading...</span></div><div class="kpi-change" id="ovDomainRankSub" style="opacity:0.5;">live data</div></div>
+          </div>
+          <!-- Quick Actions -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+            <div class="chart-card" style="cursor:pointer;" onclick="switchPage('keyword-research', null)">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="card-icon card-icon-purple" style="width:44px;height:44px;"><i class="fas fa-key"></i></div>
+                <div><h4 style="margin:0;">Keyword Research</h4><p style="color:var(--text-muted); font-size:0.85rem; margin:4px 0 0;">Find high-value keywords</p></div>
+              </div>
+            </div>
+            <div class="chart-card" style="cursor:pointer;" onclick="switchPage('site-audit', null)">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="card-icon card-icon-cyan" style="width:44px;height:44px;"><i class="fas fa-stethoscope"></i></div>
+                <div><h4 style="margin:0;">Site Audit</h4><p style="color:var(--text-muted); font-size:0.85rem; margin:4px 0 0;">Technical SEO crawl</p></div>
+              </div>
+            </div>
+            <div class="chart-card" style="cursor:pointer;" onclick="switchPage('aeo', null)">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="card-icon card-icon-gold" style="width:44px;height:44px;"><i class="fas fa-robot"></i></div>
+                <div><h4 style="margin:0;">AEO Analysis</h4><p style="color:var(--text-muted); font-size:0.85rem; margin:4px 0 0;">Answer Engine readiness</p></div>
+              </div>
+            </div>
+            <div class="chart-card" style="cursor:pointer;" onclick="switchPage('serp-tracker', null)">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="card-icon card-icon-green" style="width:44px;height:44px;"><i class="fas fa-ranking-star"></i></div>
+                <div><h4 style="margin:0;">SERP Tracker</h4><p style="color:var(--text-muted); font-size:0.85rem; margin:4px 0 0;">Live SERP positions</p></div>
+              </div>
+            </div>
+            <div class="chart-card" style="cursor:pointer;" onclick="switchPage('backlinks', null)">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="card-icon card-icon-blue" style="width:44px;height:44px;"><i class="fas fa-link"></i></div>
+                <div><h4 style="margin:0;">Backlink Analyzer</h4><p style="color:var(--text-muted); font-size:0.85rem; margin:4px 0 0;">Full backlink profile</p></div>
+              </div>
+            </div>
+            <div class="chart-card" style="cursor:pointer;" onclick="switchPage('content-silos', null)">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="card-icon card-icon-red" style="width:44px;height:44px;"><i class="fas fa-sitemap"></i></div>
+                <div><h4 style="margin:0;">Content Silos</h4><p style="color:var(--text-muted); font-size:0.85rem; margin:4px 0 0;">Site structure mapping</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== KEYWORD RESEARCH ==================== -->
+        <div class="dash-page" id="page-keyword-research">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-key" style="color:var(--accent-purple);"></i> Keyword Research</h2>
+              <p>Discover high-value, low-competition keywords with real-time search data.</p>
+            </div>
+            <div id="kwApiStatus"></div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tab-nav">
+            <button class="tab-nav-btn active" onclick="switchKWTab('suggestions', this)">Keyword Suggestions</button>
+            <button class="tab-nav-btn" onclick="switchKWTab('related', this)">Related Keywords</button>
+            <button class="tab-nav-btn" onclick="switchKWTab('questions', this)">Questions (PAA)</button>
+            <button class="tab-nav-btn" onclick="switchKWTab('volume', this)">Search Volume Lookup</button>
+            <button class="tab-nav-btn" onclick="switchKWTab('difficulty', this)">Keyword Difficulty</button>
+            <button class="tab-nav-btn" onclick="switchKWTab('gap', this)">Keyword Gap</button>
+          </div>
+
+          <!-- Suggestions Tab -->
+          <div class="tab-panel active" id="kw-tab-suggestions">
+            <div class="chart-card">
+              <div class="tool-input-row">
+                <input type="text" class="form-input" id="kwSeedInput" placeholder="Enter seed keyword (e.g., 'marketing agency')">
+                <select class="form-select" id="kwLocationSelect" style="max-width:180px;">
+                  <option value="2840">United States</option>
+                  <option value="2826">United Kingdom</option>
+                  <option value="2124">Canada</option>
+                  <option value="2036">Australia</option>
+                  <option value="2276">Germany</option>
+                  <option value="2250">France</option>
+                  <option value="2356">India</option>
+                </select>
+                <select class="form-select" id="kwLimitSelect" style="max-width:120px;">
+                  <option value="25">25 results</option>
+                  <option value="50" selected>50 results</option>
+                  <option value="100">100 results</option>
+                  <option value="200">200 results</option>
+                </select>
+                <button class="btn btn-primary" onclick="runKeywordSuggestions()"><i class="fas fa-search"></i> Research</button>
+                <button class="btn btn-outline" onclick="exportTableCSV('kwResultsTable')"><i class="fas fa-download"></i> CSV</button>
+              </div>
+              <div id="kwSuggestionsResults">
+                <div class="results-empty">
+                  <i class="fas fa-search" style="font-size:2rem; margin-bottom:12px; display:block; opacity:0.3;"></i>
+                  Enter a seed keyword and click Research to get real-time keyword data.<br>
+                  <small>Enterprise-grade keyword intelligence</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Related Keywords Tab -->
+          <div class="tab-panel" id="kw-tab-related">
+            <div class="chart-card">
+              <div class="tool-input-row">
+                <input type="text" class="form-input" id="kwRelatedInput" placeholder="Enter keyword to find related terms">
+                <button class="btn btn-primary" onclick="runRelatedKeywords()"><i class="fas fa-search"></i> Find Related</button>
+              </div>
+              <div id="kwRelatedResults"><div class="results-empty">Enter a keyword to discover related terms with search volume and CPC data.</div></div>
+            </div>
+          </div>
+
+          <!-- Questions Tab -->
+          <div class="tab-panel" id="kw-tab-questions">
+            <div class="chart-card">
+              <div class="tool-input-row">
+                <input type="text" class="form-input" id="kwQuestionsInput" placeholder="Enter topic to find questions people ask">
+                <button class="btn btn-gold" onclick="runKeywordQuestions()"><i class="fas fa-question-circle"></i> Find Questions</button>
+              </div>
+              <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:16px;"><i class="fas fa-info-circle"></i> Great for FAQ sections, AEO optimization, and "People Also Ask" targeting.</p>
+              <div id="kwQuestionsResults"><div class="results-empty">Find what questions people are asking about your topic. Perfect for AEO &amp; FAQ content.</div></div>
+            </div>
+          </div>
+
+          <!-- Volume Lookup Tab -->
+          <div class="tab-panel" id="kw-tab-volume">
+            <div class="chart-card">
+              <div class="tool-input-row">
+                <textarea class="form-input" id="kwVolumeInput" placeholder="Enter keywords (one per line) to get exact search volume and CPC data" style="min-height:80px; flex:1;"></textarea>
+              </div>
+              <div style="display:flex; gap:12px; margin-bottom:24px;">
+                <button class="btn btn-primary" onclick="runVolumeCheck()"><i class="fas fa-chart-bar"></i> Get Volume</button>
+                <small style="color:var(--text-muted); align-self:center;">Enter up to 700 keywords, one per line</small>
+              </div>
+              <div id="kwVolumeResults"><div class="results-empty">Paste your keyword list to get exact search volumes, CPC, and competition levels from Google Ads data.</div></div>
+            </div>
+          </div>
+
+          <!-- Keyword Difficulty Tab -->
+          <div class="tab-panel" id="kw-tab-difficulty">
+            <div class="chart-card">
+              <div class="tool-input-row">
+                <textarea class="form-input" id="kwDifficultyInput" placeholder="Enter keywords (one per line) to check difficulty scores" style="min-height:80px; flex:1;"></textarea>
+              </div>
+              <div style="display:flex; gap:12px; margin-bottom:24px;">
+                <button class="btn btn-primary" onclick="runDifficultyCheck()"><i class="fas fa-mountain"></i> Check Difficulty</button>
+              </div>
+              <div id="kwDifficultyResults"><div class="results-empty">Check how hard it is to rank for specific keywords. Lower = easier to rank.</div></div>
+            </div>
+          </div>
+
+          <!-- Keyword Gap Tab -->
+          <div class="tab-panel" id="kw-tab-gap">
+            <div class="chart-card">
+              <div class="tool-input-row">
+                <input type="text" class="form-input" id="kwGapYourDomain" placeholder="Your domain (e.g., jeff-cline.com)">
+                <input type="text" class="form-input" id="kwGapCompDomain" placeholder="Competitor domain (e.g., semrush.com)">
+                <button class="btn btn-primary" onclick="runKeywordGap()"><i class="fas fa-chess"></i> Find Gap</button>
+              </div>
+              <div id="kwGapResults"><div class="results-empty">Find keywords your competitor ranks for that you don't. Discover untapped opportunities.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== BACKLINK ANALYZER ==================== -->
+        <div class="dash-page" id="page-backlinks">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-link" style="color:var(--accent-green);"></i> Backlink Analyzer</h2>
+              <p>Full backlink profile analysis. Referring domains, anchor text, dofollow/nofollow breakdown.</p>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="tool-input-row">
+              <input type="text" class="form-input" id="blDomainInput" placeholder="Enter domain to analyze (e.g., jeff-cline.com)">
+              <button class="btn btn-primary" onclick="runBacklinkAnalysis()"><i class="fas fa-link"></i> Analyze Backlinks</button>
+              <button class="btn btn-outline" onclick="exportTableCSV('blResultsTable')"><i class="fas fa-download"></i> CSV</button>
+            </div>
+          </div>
+
+          <!-- Backlink Summary KPIs -->
+          <div class="kpi-grid" id="blSummaryKPIs" style="display:none;">
+            <div class="kpi-card"><div class="kpi-label"><span>Total Backlinks</span></div><div class="kpi-value" id="blTotalLinks">-</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Referring Domains</span></div><div class="kpi-value" id="blRefDomains">-</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Domain Rank</span></div><div class="kpi-value" id="blDomainRank">-</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Broken Backlinks</span></div><div class="kpi-value" id="blBrokenLinks">-</div></div>
+          </div>
+
+          <!-- Backlink Tab Nav -->
+          <div class="tab-nav" id="blTabNav" style="display:none;">
+            <button class="tab-nav-btn active" onclick="switchBLTab('list', this)">All Backlinks</button>
+            <button class="tab-nav-btn" onclick="switchBLTab('domains', this)">Referring Domains</button>
+          </div>
+
+          <div class="tab-panel active" id="bl-tab-list">
+            <div class="chart-card" id="blBacklinksCard" style="display:none;">
+              <div class="chart-card-header"><h4>Backlinks</h4><span class="text-muted" id="blBacklinksCount"></span></div>
+              <div id="blBacklinksResults"></div>
+            </div>
+          </div>
+          <div class="tab-panel" id="bl-tab-domains">
+            <div class="chart-card" id="blDomainsCard" style="display:none;">
+              <div class="chart-card-header"><h4>Referring Domains</h4></div>
+              <div id="blDomainsResults"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== DOMAIN ANALYSIS ==================== -->
+        <div class="dash-page" id="page-domain-analysis">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-globe" style="color:var(--accent-blue);"></i> Domain Analysis</h2>
+              <p>Full domain overview: organic traffic, keywords, rankings, estimated traffic cost.</p>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="tool-input-row">
+              <input type="text" class="form-input" id="daDomainInput" placeholder="Enter domain to analyze (e.g., jeff-cline.com)">
+              <button class="btn btn-primary" onclick="runDomainAnalysis()"><i class="fas fa-globe"></i> Analyze Domain</button>
+            </div>
+          </div>
+
+          <div id="daResults" style="display:none;">
+            <div class="kpi-grid">
+              <div class="kpi-card"><div class="kpi-label"><span>Organic Traffic (Est.)</span></div><div class="kpi-value text-green" id="daOrgTraffic">-</div></div>
+              <div class="kpi-card"><div class="kpi-label"><span>Organic Keywords</span></div><div class="kpi-value text-blue" id="daOrgKeywords">-</div></div>
+              <div class="kpi-card"><div class="kpi-label"><span>Traffic Cost (Est.)</span></div><div class="kpi-value text-gold" id="daTrafficCost">-</div></div>
+              <div class="kpi-card"><div class="kpi-label"><span>Paid Keywords</span></div><div class="kpi-value text-purple" id="daPaidKeywords">-</div></div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-card-header"><h4>Top Organic Keywords</h4><button class="btn btn-sm btn-outline" onclick="exportTableCSV('daKeywordsTable')"><i class="fas fa-download"></i> CSV</button></div>
+              <div id="daKeywordsResults"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== SERP TRACKER ==================== -->
+        <div class="dash-page" id="page-serp-tracker">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-ranking-star" style="color:var(--accent-gold);"></i> SERP Tracker</h2>
+              <p>See exactly who ranks for any keyword. Live SERP data including featured snippets, PAA, and more.</p>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="tool-input-row">
+              <input type="text" class="form-input" id="serpKeywordInput" placeholder="Enter keyword to check SERP (e.g., 'marketing agency dashboard')">
+              <select class="form-select" id="serpLocationSelect" style="max-width:180px;">
+                <option value="2840">United States</option>
+                <option value="2826">United Kingdom</option>
+                <option value="2124">Canada</option>
+                <option value="2036">Australia</option>
+              </select>
+              <button class="btn btn-primary" onclick="runSERPCheck()"><i class="fas fa-ranking-star"></i> Check SERP</button>
+            </div>
+          </div>
+
+          <!-- SERP Features Summary -->
+          <div class="kpi-grid" id="serpFeaturesKPIs" style="display:none;">
+            <div class="kpi-card"><div class="kpi-label"><span>Featured Snippet</span></div><div class="kpi-value" id="serpFS">-</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>People Also Ask</span></div><div class="kpi-value" id="serpPAA">-</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Total Results</span></div><div class="kpi-value" id="serpTotal">-</div></div>
+          </div>
+
+          <div class="chart-card" id="serpResultsCard" style="display:none;">
+            <div class="chart-card-header"><h4>Organic SERP Results</h4></div>
+            <div id="serpResults"></div>
+          </div>
+        </div>
+
+        <!-- ==================== COMPETITOR ANALYSIS ==================== -->
+        <div class="dash-page" id="page-competitors">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-chess" style="color:var(--accent-red);"></i> Competitor Analysis</h2>
+              <p>Discover who you're competing against and find opportunities they're missing.</p>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="tool-input-row">
+              <input type="text" class="form-input" id="compDomainInput" placeholder="Enter your domain (e.g., jeff-cline.com)">
+              <button class="btn btn-primary" onclick="runCompetitorAnalysis()"><i class="fas fa-chess"></i> Find Competitors</button>
+            </div>
+          </div>
+          <div class="chart-card" id="compResultsCard" style="display:none;">
+            <div class="chart-card-header"><h4>Organic Competitors</h4></div>
+            <div id="compResults"></div>
+          </div>
+        </div>
+
+        <!-- ==================== SITE AUDIT ==================== -->
+        <div class="dash-page" id="page-site-audit">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-stethoscope" style="color:var(--accent-cyan);"></i> Site Audit</h2>
+              <p>Technical SEO audit. Crawl your site and find issues like Screaming Frog, but in your browser.</p>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="tool-input-row">
+              <input type="text" class="form-input" id="auditUrlInput" placeholder="Enter full URL to audit (e.g., https://jeff-cline.com)">
+              <select class="form-select" id="auditDepth" style="max-width:140px;">
+                <option value="10">10 pages</option>
+                <option value="50" selected>50 pages</option>
+                <option value="100">100 pages</option>
+                <option value="250">250 pages</option>
+              </select>
+              <button class="btn btn-primary" onclick="runSiteAudit()"><i class="fas fa-stethoscope"></i> Start Audit</button>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.85rem;"><i class="fas fa-info-circle"></i> Audit runs server-side. Results may take 1-5 minutes depending on site size.</p>
+          </div>
+          <div id="auditResults"></div>
+
+          <!-- Quick instant page analysis -->
+          <div class="chart-card" style="margin-top:24px;">
+            <div class="chart-card-header"><h4><i class="fas fa-bolt" style="color:var(--accent-gold);"></i> Instant Page Analysis</h4></div>
+            <div class="tool-input-row">
+              <input type="text" class="form-input" id="instantUrlInput" placeholder="Enter a single page URL for instant SEO analysis">
+              <button class="btn btn-gold" onclick="runInstantAnalysis()"><i class="fas fa-bolt"></i> Analyze</button>
+            </div>
+            <div id="instantResults"></div>
+          </div>
+        </div>
+
+        <!-- ==================== AEO OPTIMIZATION ==================== -->
+        <div class="dash-page" id="page-aeo">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-robot" style="color:var(--accent-gold);"></i> AEO Optimization</h2>
+              <p>Answer Engine Optimization for ChatGPT, Claude, Google AI, voice assistants, and zero-click search.</p>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="tool-input-row">
+              <input type="text" class="form-input" id="aeoDomainInput" placeholder="Enter domain to analyze (e.g., jeff-cline.com)">
+              <input type="text" class="form-input" id="aeoKeywordsInput" placeholder="Top keywords (comma-separated, e.g., seo agency, marketing)" style="flex:2;">
+              <button class="btn btn-gold" onclick="runAEOAnalysis()"><i class="fas fa-robot"></i> Analyze AEO</button>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.85rem;"><i class="fas fa-info-circle"></i> Analyzes your domain's Answer Engine readiness: featured snippets, People Also Ask, schema markup, content structure, and voice search signals.</p>
+          </div>
+
+          <!-- AEO KPIs (hidden until analysis runs) -->
+          <div class="kpi-grid" id="aeoKPIs" style="display:none;">
+            <div class="kpi-card"><div class="kpi-label"><span>AEO Score</span></div><div class="kpi-value text-gold" id="aeoScore">--</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Featured Snippets</span></div><div class="kpi-value text-blue" id="aeoSnippets">--</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>PAA Appearances</span></div><div class="kpi-value text-green" id="aeoPAA">--</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>SERP Features Found</span></div><div class="kpi-value text-purple" id="aeoSerpFeatures">--</div></div>
+          </div>
+
+          <!-- AEO Results -->
+          <div id="aeoResults"></div>
+
+          <!-- AEO Checklist (generated after analysis) -->
+          <div id="aeoChecklist"></div>
+        </div>
+
+        <!-- ==================== CONTENT SILOS ==================== -->
+        <div class="dash-page" id="page-content-silos">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-sitemap" style="color:var(--accent-green);"></i> Content Silo Architecture</h2>
+              <p>Analyze your site's content structure and discover silo opportunities from live crawl data.</p>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="tool-input-row">
+              <input type="text" class="form-input" id="siloDomainInput" placeholder="Enter domain to analyze (e.g., jeff-cline.com)">
+              <select class="form-select" id="siloDepth" style="max-width:140px;">
+                <option value="50">50 pages</option>
+                <option value="100" selected>100 pages</option>
+                <option value="250">250 pages</option>
+              </select>
+              <button class="btn btn-green" onclick="runSiloAnalysis()"><i class="fas fa-sitemap"></i> Analyze Silos</button>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.85rem;"><i class="fas fa-info-circle"></i> Crawls your site to map content structure into silos. Groups pages by URL path hierarchy, counts internal links, and identifies pillar/supporting page relationships.</p>
+          </div>
+
+          <!-- Silo KPIs (hidden until analysis runs) -->
+          <div class="kpi-grid" id="siloKPIs" style="display:none;">
+            <div class="kpi-card"><div class="kpi-label"><span>Silos Detected</span></div><div class="kpi-value text-green" id="siloCount">--</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Total Pages</span></div><div class="kpi-value text-blue" id="siloPages">--</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Avg Internal Links</span></div><div class="kpi-value text-gold" id="siloAvgLinks">--</div></div>
+            <div class="kpi-card"><div class="kpi-label"><span>Orphan Pages</span></div><div class="kpi-value text-red" id="siloOrphans">--</div></div>
+          </div>
+
+          <!-- Silo Results -->
+          <div id="siloResults"></div>
+        </div>
+
+        <!-- ==================== WEBSITE BUILDER ==================== -->
+        <div class="dash-page" id="page-website-builder">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-wand-magic-sparkles" style="color:var(--accent-gold);"></i> Optimized Website Builder</h2>
+              <p>Generate a fully SEO-optimized demo site with keyword-driven content architecture in one click.</p>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="form-group">
+              <label class="form-label">Website URL</label>
+              <input type="url" class="form-input" id="wbWebsiteUrl" placeholder="https://example.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Business / Website Name</label>
+              <input type="text" class="form-input" id="wbWebsiteName" placeholder="Acme Corporation">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Top 3 Money Keywords</label>
+              <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:8px;">The keywords your business would pay to rank #1 for.</p>
+              <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <input type="text" class="form-input" id="wbKeyword1" placeholder="Keyword 1 (e.g., personal injury lawyer)" style="flex:1; min-width:200px;">
+                <input type="text" class="form-input" id="wbKeyword2" placeholder="Keyword 2 (e.g., car accident attorney)" style="flex:1; min-width:200px;">
+                <input type="text" class="form-input" id="wbKeyword3" placeholder="Keyword 3 (e.g., slip and fall lawyer)" style="flex:1; min-width:200px;">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Business Story &amp; Goal</label>
+              <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:8px;">What does this business do? What's the goal of the site?</p>
+              <textarea class="form-input" id="wbBusinessContext" rows="4" placeholder="e.g., We're a personal injury law firm in Dallas serving accident victims for 20 years. Goal: generate qualified leads from people searching for legal help after an accident." style="resize:vertical;"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone Number <small style="color:var(--text-muted);">(optional, for CTA)</small></label>
+              <input type="tel" class="form-input" id="wbPhoneNumber" placeholder="(555) 123-4567" style="max-width:300px;">
+            </div>
+            <button class="btn btn-gold" onclick="runWebsiteBuilder()" id="wbSubmitBtn"><i class="fas fa-wand-magic-sparkles"></i> Build Optimized Website</button>
+            <div id="wbStatus" style="margin-top:16px;"></div>
+          </div>
+
+          <div id="wbResults"></div>
+        </div>
+
+        <!-- ==================== MARKETING SITE BUILDER ==================== -->
+        <div class="dash-page" id="page-marketing-builder">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-building" style="color:var(--accent-gold);"></i> Marketing Site Builder</h2>
+              <p>Premium marketing silo framework optimized for conversions and SEO.</p>
+            </div>
+          </div>
+
+          <div style="max-width:720px; margin:0 auto;">
+            <div style="background:linear-gradient(135deg, #ffffff 0%, #faf8f5 100%); border:2px solid #d4a843; border-radius:16px; padding:48px 40px; box-shadow:0 8px 40px rgba(212,168,67,0.15), 0 0 0 1px rgba(212,168,67,0.1); position:relative; overflow:hidden;">
+              <!-- Gold shimmer accent -->
+              <div style="position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, #d4a843, #f5d77a, #d4a843);"></div>
+
+              <div style="text-align:center; margin-bottom:32px;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:16px; background:linear-gradient(135deg, #d4a843, #f5d77a); margin-bottom:16px;">
+                  <i class="fas fa-building" style="font-size:1.8rem; color:#fff;"></i>
+                </div>
+                <h2 style="color:#1a1a2e; font-size:1.6rem; font-weight:800; letter-spacing:0.02em; margin:0 0 8px;">MARKETING SITE BUILDER</h2>
+                <div style="display:inline-block; padding:4px 14px; border-radius:100px; background:linear-gradient(135deg, #d4a843, #f5d77a); color:#1a1a2e; font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;">Premium Tool</div>
+              </div>
+
+              <p style="color:#333; font-size:1rem; line-height:1.7; margin-bottom:20px; text-align:center;">
+                Will build <strong>3 silos</strong> optimized to <strong>5 supporting long tails</strong> with a main call to action as a base framework. Up to <strong>3 iterations</strong> available with the developer.
+              </p>
+
+              <div style="background:rgba(212,168,67,0.08); border:1px solid rgba(212,168,67,0.2); border-radius:10px; padding:16px 20px; margin-bottom:28px;">
+                <p style="color:#555; font-size:0.9rem; line-height:1.6; margin:0;">
+                  <strong style="color:#d4a843;">DESIGN &amp; LOOK/FEEL:</strong> Best practices marketing silo to funnel traffic to your CTA (VoiceDrips AI Inbound Number) or your Website for <strong>TRAFFIC</strong> and <strong>SEO</strong>.
+                </p>
+              </div>
+
+              <div style="text-align:center; margin-bottom:28px;">
+                <div style="display:inline-flex; align-items:baseline; gap:6px;">
+                  <span style="font-size:2.5rem; font-weight:900; color:#1a1a2e;">4,500</span>
+                  <span style="font-size:1rem; font-weight:600; color:#888;">Credits</span>
+                </div>
+              </div>
+
+              <div style="text-align:center;">
+                <button onclick="handleMarketingBuild()" style="display:inline-flex; align-items:center; gap:10px; padding:16px 48px; font-size:1.1rem; font-weight:700; color:#1a1a2e; background:linear-gradient(135deg, #d4a843, #f5d77a); border:none; border-radius:10px; cursor:pointer; letter-spacing:0.04em; transition:all 0.2s ease; box-shadow:0 4px 16px rgba(212,168,67,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 24px rgba(212,168,67,0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(212,168,67,0.3)';">
+                  <i class="fas fa-rocket"></i> BUILD
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Insufficient Credits Modal -->
+        <div id="insufficientCreditsModal" style="display:none; position:fixed; inset:0; background:rgba(10,15,30,0.85); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+          <div style="background:var(--gradient-card); border:1px solid var(--accent-red); border-radius:var(--radius-lg); padding:40px; max-width:480px; width:90%; text-align:center; position:relative;">
+            <div style="font-size:3rem; margin-bottom:16px;">⚠️</div>
+            <h3 style="color:var(--accent-red); margin-bottom:12px; font-weight:800; letter-spacing:0.03em;">YOU DO NOT HAVE ENOUGH JEFF CLINE CREDITS</h3>
+            <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.6; margin-bottom:24px;">Please contact the team for additional credits or wait for your renewal cycle.</p>
+            <button onclick="document.getElementById('insufficientCreditsModal').style.display='none';" class="btn btn-primary" style="padding:12px 32px;">
+              <i class="fas fa-times"></i> Close
+            </button>
+          </div>
+        </div>
+
+        <!-- ==================== CLIENTS ==================== -->
+        <div class="dash-page" id="page-clients">
+          <div class="dash-page-header"><div><h2><i class="fas fa-users" style="color:var(--accent-blue);"></i> Client Management</h2><p>Manage all agency clients, plans, and performance.</p></div></div>
+          <div class="chart-card" style="border-color:var(--border-color); text-align:center; padding:60px 20px;">
+            <i class="fas fa-plug" style="font-size:2.5rem; color:var(--text-muted); margin-bottom:16px; display:block;"></i>
+            <h4 style="margin-bottom:8px;">CRM Not Connected</h4>
+            <p style="color:var(--text-muted); max-width:400px; margin:0 auto;">Connect your GoHighLevel API key in <a href="#" onclick="switchPage('settings', null); return false;">Settings</a> to sync client data, plans, MRR, and performance scores.</p>
+          </div>
+        </div>
+
+        <!-- ==================== REPORTS ==================== -->
+        <div class="dash-page" id="page-reports">
+          <div class="dash-page-header"><div><h2><i class="fas fa-chart-pie" style="color:var(--accent-cyan);"></i> Reports</h2><p>Generate branded PDF reports for clients.</p></div></div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
+            <div class="card"><div style="display:flex; align-items:center; gap:16px;"><div class="card-icon card-icon-blue"><i class="fas fa-chart-line"></i></div><div><h4>SEO Performance</h4><p style="color:var(--text-muted); font-size:0.85rem;">Rankings, traffic, backlinks</p></div></div><div style="margin-top:16px; display:flex; gap:8px;"><button class="btn btn-sm btn-primary"><i class="fas fa-download"></i> PDF</button><button class="btn btn-sm btn-outline"><i class="fas fa-clock"></i> Schedule</button></div></div>
+            <div class="card"><div style="display:flex; align-items:center; gap:16px;"><div class="card-icon card-icon-gold"><i class="fas fa-robot"></i></div><div><h4>AEO Report</h4><p style="color:var(--text-muted); font-size:0.85rem;">AEO scores, snippets, schema</p></div></div><div style="margin-top:16px; display:flex; gap:8px;"><button class="btn btn-sm btn-primary"><i class="fas fa-download"></i> PDF</button><button class="btn btn-sm btn-outline"><i class="fas fa-clock"></i> Schedule</button></div></div>
+            <div class="card"><div style="display:flex; align-items:center; gap:16px;"><div class="card-icon card-icon-green"><i class="fas fa-bullseye"></i></div><div><h4>Paid Ads Report</h4><p style="color:var(--text-muted); font-size:0.85rem;">Spend, ROAS, conversions</p></div></div><div style="margin-top:16px; display:flex; gap:8px;"><button class="btn btn-sm btn-primary"><i class="fas fa-download"></i> PDF</button><button class="btn btn-sm btn-outline"><i class="fas fa-clock"></i> Schedule</button></div></div>
+            <div class="card"><div style="display:flex; align-items:center; gap:16px;"><div class="card-icon card-icon-red"><i class="fas fa-file-invoice-dollar"></i></div><div><h4>Full Agency Report</h4><p style="color:var(--text-muted); font-size:0.85rem;">All channels combined</p></div></div><div style="margin-top:16px; display:flex; gap:8px;"><button class="btn btn-sm btn-gold"><i class="fas fa-download"></i> PDF</button><button class="btn btn-sm btn-outline"><i class="fas fa-clock"></i> Schedule</button></div></div>
+          </div>
+        </div>
+
+        <!-- ==================== LEADS ==================== -->
+        <div class="dash-page" id="page-leads">
+          <div class="dash-page-header"><div><h2><i class="fas fa-funnel-dollar" style="color:var(--accent-green);"></i> Leads &amp; Funnel</h2><p>Quiz submissions, GoHighLevel pipeline.</p></div></div>
+          <div class="chart-card" style="border-color:var(--border-color); text-align:center; padding:60px 20px;">
+            <i class="fas fa-plug" style="font-size:2.5rem; color:var(--text-muted); margin-bottom:16px; display:block;"></i>
+            <h4 style="margin-bottom:8px;">GoHighLevel Not Connected</h4>
+            <p style="color:var(--text-muted); max-width:400px; margin:0 auto;">Connect your GoHighLevel API key in <a href="#" onclick="switchPage('settings', null); return false;">Settings</a> to see live quiz submissions, qualified leads, pipeline value, and deal tracking.</p>
+          </div>
+        </div>
+
+        <!-- ==================== PAID ADS ==================== -->
+        <div class="dash-page" id="page-paid-ads">
+          <div class="dash-page-header"><div><h2><i class="fas fa-bullseye" style="color:var(--accent-green);"></i> Paid Advertising</h2><p>Google Ads, Microsoft Ads, Reddit Ads - one view.</p></div></div>
+          <div class="chart-card" style="border-color:var(--border-color); text-align:center; padding:60px 20px;">
+            <i class="fas fa-plug" style="font-size:2.5rem; color:var(--text-muted); margin-bottom:16px; display:block;"></i>
+            <h4 style="margin-bottom:8px;">Ad Platform APIs Not Connected</h4>
+            <p style="color:var(--text-muted); max-width:480px; margin:0 auto;">Connect your advertising platform API keys in <a href="#" onclick="switchPage('settings', null); return false;">Settings</a> to see live spend, conversions, CPA, and ROAS across all platforms.</p>
+            <div style="display:flex; gap:16px; justify-content:center; margin-top:24px; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:var(--bg-input); border-radius:var(--radius-sm);"><i class="fab fa-google" style="color:#4285f4;"></i> <span style="color:var(--text-muted); font-size:0.85rem;">Google Ads</span></div>
+              <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:var(--bg-input); border-radius:var(--radius-sm);"><i class="fab fa-microsoft" style="color:#00a4ef;"></i> <span style="color:var(--text-muted); font-size:0.85rem;">Microsoft Ads</span></div>
+              <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:var(--bg-input); border-radius:var(--radius-sm);"><i class="fab fa-reddit" style="color:#ff4500;"></i> <span style="color:var(--text-muted); font-size:0.85rem;">Reddit Ads</span></div>
+              <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:var(--bg-input); border-radius:var(--radius-sm);"><i class="fab fa-facebook" style="color:#1877f2;"></i> <span style="color:var(--text-muted); font-size:0.85rem;">Meta Ads</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TV/CTV ADS ==================== -->
+        <div class="dash-page" id="page-tv-ads">
+          <div class="dash-page-header"><div><h2><i class="fas fa-tv" style="color:var(--accent-purple);"></i> TV / CTV Advertising</h2><p>MNTN + Vibe.com connected TV campaigns.</p></div></div>
+          <div class="chart-card" style="border-color:var(--border-color); text-align:center; padding:60px 20px;">
+            <i class="fas fa-plug" style="font-size:2.5rem; color:var(--text-muted); margin-bottom:16px; display:block;"></i>
+            <h4 style="margin-bottom:8px;">CTV Platforms Not Connected</h4>
+            <p style="color:var(--text-muted); max-width:400px; margin:0 auto;">Connect your MNTN and Vibe.com API keys in <a href="#" onclick="switchPage('settings', null); return false;">Settings</a> to see live CTV campaign performance, impressions, and completion rates.</p>
+            <div style="display:flex; gap:16px; justify-content:center; margin-top:24px;">
+              <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:var(--bg-input); border-radius:var(--radius-sm);"><i class="fas fa-tv" style="color:var(--accent-purple);"></i> <span style="color:var(--text-muted); font-size:0.85rem;">MNTN</span></div>
+              <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:var(--bg-input); border-radius:var(--radius-sm);"><i class="fas fa-tv" style="color:var(--accent-cyan);"></i> <span style="color:var(--text-muted); font-size:0.85rem;">Vibe.com</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TRACKING PIXELS ==================== -->
+        <div class="dash-page" id="page-tracking">
+          <div class="dash-page-header"><div><h2><i class="fas fa-crosshairs" style="color:var(--accent-red);"></i> Tracking Pixel Network</h2><p>Cross-network tracking, intent detection, partner notifications.</p></div></div>
+          <div class="chart-card" style="border-color:var(--accent-gold); border-style:dashed; text-align:center; padding:40px 20px; margin-bottom:24px;">
+            <i class="fas fa-code" style="font-size:1.5rem; color:var(--accent-gold); margin-bottom:8px; display:block;"></i>
+            <p style="color:var(--text-muted); font-size:0.85rem;">Pixel analytics require the tracking backend to be deployed. The pixel code below is ready to install.</p>
+          </div>
+          <div class="chart-card"><div class="chart-card-header"><h4>Your Tracking Pixel Code</h4><span class="badge badge-gold">Universal Pixel</span></div><div class="pixel-code"><button class="copy-btn" onclick="copyPixelCode()"><i class="fas fa-copy"></i> Copy</button><pre style="margin:0; white-space:pre-wrap; line-height:1.6;">&lt;!-- Jeff Cline Network Tracking Pixel --&gt;
+&lt;script&gt;
+  (function(j,c,n,e,t){
+    j['JCNetworkObject']=t;j[t]=j[t]||function(){
+    (j[t].q=j[t].q||[]).push(arguments)};j[t].l=1*new Date();
+    e=c.createElement(n);e.async=1;
+    e.src='https://pixel.jeff-cline.com/jc.js';
+    c.getElementsByTagName(n)[0].parentNode.insertBefore(e,c.getElementsByTagName(n)[0]);
+  })(window,document,'script','','jcn');
+  jcn('init', 'JC-PIXEL-YOUR-ID-HERE');
+  jcn('track', 'PageView');
+  jcn('network', 'cross-track', { partner: 'all' });
+&lt;/script&gt;</pre></div></div>
+          <div class="chart-card" style="border-color:var(--accent-gold);"><div class="chart-card-header"><h4><i class="fas fa-hammer" style="color:var(--accent-gold);"></i> #ToBuildNext Queue</h4></div><table class="data-table"><thead><tr><th>Site</th><th>Category</th><th>Partner</th><th>Status</th></tr></thead><tbody><tr><td><strong class="text-gold">semaglutideshots.com</strong></td><td>Health / Weight Loss</td><td>Krystalore</td><td><span class="status status-pending">Queued</span></td></tr><tr><td><strong>weightlosslollipops.com</strong></td><td>Health / Weight Loss</td><td>Krystalore</td><td><span class="status status-pending">Queued</span></td></tr></tbody></table></div>
+        </div>
+
+        <!-- ==================== REAL-TIME EXPENSES ==================== -->
+        <div class="dash-page" id="page-expenses">
+          <div class="dash-page-header"><div><h2><i class="fas fa-receipt" style="color:var(--accent-red);"></i> Real-Time Expenses</h2><p>Track every API cost, ad spend, and subscription in real-time.</p></div></div>
+          <!-- SEO API balance (live) -->
+          <div class="kpi-grid" id="expenseDfsKPIs" style="display:none;">
+            <div class="kpi-card" style="border-left:3px solid var(--accent-blue);"><div class="kpi-label"><span>SEO API Balance</span></div><div class="kpi-value text-blue" id="expDfsBalance">--</div><div class="kpi-change" style="opacity:0.5;">Live from API</div></div>
+          </div>
+          <div class="chart-card" style="border-color:var(--border-color); text-align:center; padding:60px 20px;">
+            <i class="fas fa-plug" style="font-size:2.5rem; color:var(--text-muted); margin-bottom:16px; display:block;"></i>
+            <h4 style="margin-bottom:8px;">Expense Tracking Not Connected</h4>
+            <p style="color:var(--text-muted); max-width:480px; margin:0 auto;">Full expense tracking requires connecting your ad platform APIs, subscription billing, and accounting integrations in <a href="#" onclick="switchPage('settings', null); return false;">Settings</a>.</p>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:12px;"><i class="fas fa-info-circle"></i> SEO API balance is shown above when connected.</p>
+          </div>
+        </div>
+
+        <!-- ==================== INTEGRATIONS ==================== -->
+        <div class="dash-page" id="page-integrations">
+          <div class="dash-page-header"><div><h2><i class="fas fa-plug" style="color:var(--accent-cyan);"></i> Integrations</h2><p>All connected services and APIs.</p></div></div>
+          <div class="integration-grid">
+            <div class="integration-card"><div class="integration-icon card-icon-blue"><i class="fas fa-database"></i></div><div class="integration-info"><h5>SEO Data Engine</h5><p>Keywords, backlinks, SERP, audit</p></div><span class="integration-status" id="intDfsStatus">Checking...</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-green"><i class="fas fa-chart-simple"></i></div><div class="integration-info"><h5>Google Analytics</h5><p>Traffic analytics</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-blue"><i class="fas fa-magnifying-glass-chart"></i></div><div class="integration-info"><h5>Search Console</h5><p>Search performance</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-gold"><i class="fab fa-google"></i></div><div class="integration-info"><h5>Google Ads</h5><p>PPC management</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-cyan"><i class="fab fa-microsoft"></i></div><div class="integration-info"><h5>Microsoft Ads</h5><p>Bing Ads</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-red"><i class="fab fa-reddit"></i></div><div class="integration-info"><h5>Reddit Ads</h5><p>Reddit advertising</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-purple"><i class="fas fa-tv"></i></div><div class="integration-info"><h5>MNTN</h5><p>Connected TV</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-pink"><i class="fas fa-tv"></i></div><div class="integration-info"><h5>Vibe.com</h5><p>CTV streaming</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-green"><i class="fas fa-rocket"></i></div><div class="integration-info"><h5>GoHighLevel</h5><p>CRM, funnels</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-purple"><i class="fas fa-envelope"></i></div><div class="integration-info"><h5>Klaviyo</h5><p>Email flows</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-gold"><i class="fas fa-question-circle"></i></div><div class="integration-info"><h5>AnswerThePublic</h5><p>Question research</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+            <div class="integration-card"><div class="integration-icon card-icon-red"><i class="fas fa-envelope-open-text"></i></div><div class="integration-info"><h5>Mailgun</h5><p>Transactional email</p></div><span class="integration-status status-inactive">Not Connected</span></div>
+          </div>
+        </div>
+
+        <!-- ==================== SETTINGS ==================== -->
+        <div class="dash-page" id="page-settings">
+          <div class="dash-page-header"><div><h2><i class="fas fa-gear"></i> Settings</h2><p>API keys, brand settings, account management.</p></div></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+            <!-- SEO API Status -->
+            <div class="chart-card" style="border-color:var(--accent-blue);">
+              <h4 style="margin-bottom:20px;"><i class="fas fa-database" style="color:var(--accent-blue);"></i> SEO Data Engine</h4>
+              <div id="settingsApiStatus" style="margin-bottom:16px;"></div>
+              <p style="color:var(--text-muted); font-size:0.85rem;">The SEO API connection is managed by your administrator. All tools use the global API configuration.</p>
+              <div style="margin-top:16px;">
+                <button class="btn btn-primary" onclick="testApiConnection()"><i class="fas fa-plug"></i> Test Connection</button>
+              </div>
+              <div id="settingsApiResult" style="margin-top:12px;"></div>
+            </div>
+            <!-- Brand Settings -->
+            <div class="chart-card">
+              <h4 style="margin-bottom:20px;">Brand Settings</h4>
+              <div class="form-group"><label class="form-label">Agency Name</label><input type="text" class="form-input" value="Jeff Cline"></div>
+              <div class="form-group"><label class="form-label">Website URL</label><input type="url" class="form-input" value="https://jeff-cline.com"></div>
+              <div class="form-group"><label class="form-label">Phone</label><input type="tel" class="form-input" value="(223) 400-8146"></div>
+              <div class="form-group"><label class="form-label">Tagline</label><input type="text" class="form-input" value="A Rising Tide Lifts All Boats"></div>
+              <button class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+            </div>
+            <!-- Other API Keys -->
+            <div class="chart-card" style="grid-column:span 2;">
+              <h4 style="margin-bottom:20px;">Other API Keys &amp; Integrations</h4>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="form-group"><label class="form-label">Google Ads API</label><input type="password" class="form-input" placeholder="Not connected"></div>
+                <div class="form-group"><label class="form-label">Microsoft Ads API</label><input type="password" class="form-input" placeholder="Not connected"></div>
+                <div class="form-group"><label class="form-label">GoHighLevel API</label><input type="password" class="form-input" placeholder="Not connected"></div>
+                <div class="form-group"><label class="form-label">Klaviyo API</label><input type="password" class="form-input" placeholder="Not connected"></div>
+                <div class="form-group"><label class="form-label">Reddit Ads API</label><input type="password" class="form-input" placeholder="Not connected"></div>
+                <div class="form-group"><label class="form-label">Mailgun API</label><input type="password" class="form-input" placeholder="Not connected"></div>
+              </div>
+              <button class="btn btn-primary" style="margin-top:8px;"><i class="fas fa-save"></i> Save All Keys</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== SUPER ADMIN PANEL ==================== -->
+        <div class="dash-page" id="page-super-admin">
+          <div class="dash-page-header">
+            <div>
+              <h2><i class="fas fa-shield-halved" style="color:var(--accent-gold);"></i> Super Admin Panel</h2>
+              <p>Manage API credentials, user accounts, and system configuration.</p>
+            </div>
+          </div>
+
+          <!-- Compact SEO API Status Bar -->
+          <div class="chart-card" style="margin-bottom:24px; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <i class="fas fa-key" style="color:var(--accent-gold); font-size:1rem;"></i>
+              <div>
+                <span style="font-weight:600; font-size:0.9rem;">SEO API Credentials</span>
+                <span id="saApiStatus" style="margin-left:12px;"></span>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-outline" onclick="openSeoApiModal()"><i class="fas fa-pen-to-square"></i> Edit Credentials</button>
+          </div>
+
+          <!-- SEO API Credentials Modal -->
+          <div id="seoApiModal" class="sa-modal-overlay" style="display:none;">
+            <div class="sa-modal-card">
+              <div class="sa-modal-header">
+                <h4 style="margin:0;"><i class="fas fa-key" style="color:var(--accent-gold);"></i> SEO API Credentials (Global)</h4>
+                <button class="sa-modal-close" onclick="closeSeoApiModal()" title="Close">&times;</button>
+              </div>
+              <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:16px;">These credentials are used globally by all users for SEO/AEO tools.</p>
+              <div id="saApiModalStatus" style="margin-bottom:16px;"></div>
+              <div class="form-group">
+                <label class="form-label">API Login (Email)</label>
+                <input type="text" class="form-input mono" id="saApiLogin" placeholder="api-login@example.com" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label class="form-label">API Password / Key</label>
+                <input type="password" class="form-input mono" id="saApiPassword" placeholder="API password or key" autocomplete="off">
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-gold" onclick="saveSeoApiCredentials()"><i class="fas fa-save"></i> Save Credentials</button>
+                <button class="btn btn-outline" onclick="testSeoApiCredentials()"><i class="fas fa-plug"></i> Test</button>
+              </div>
+              <div id="saApiResult" style="margin-top:12px;"></div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+            <!-- Create New User -->
+            <div class="chart-card" style="border-color:var(--accent-blue);">
+              <h4 style="margin-bottom:20px;"><i class="fas fa-user-plus" style="color:var(--accent-blue);"></i> Create New User</h4>
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-input" id="saNewUserName" placeholder="John Doe">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="saNewUserEmail" placeholder="john@example.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-input" id="saNewUserPassword" placeholder="Min 8 characters">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Role</label>
+                <select class="form-select" id="saNewUserRole">
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                  <option value="superadmin">Super Admin</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Monthly $ Budget <small style="color:var(--text-muted);">(leave blank for default)</small></label>
+                <input type="number" class="form-input" id="saNewUserCredits" placeholder="Default ($100)" min="1" max="10000">
+              </div>
+              <button class="btn btn-primary" onclick="createNewUser()"><i class="fas fa-user-plus"></i> Create User</button>
+              <div id="saNewUserResult" style="margin-top:12px;"></div>
+            </div>
+
+            <!-- Dollar Budget Configuration -->
+            <div class="chart-card" style="grid-column:span 2; border-color:var(--accent-purple);">
+              <div class="chart-card-header">
+                <h4><i class="fas fa-dollar-sign" style="color:var(--accent-purple);"></i> Dollar Budget Configuration</h4>
+                <button class="btn btn-sm btn-outline" onclick="resetCreditConfigToDefaults()"><i class="fas fa-undo"></i> Reset Defaults</button>
+              </div>
+              <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:16px;">Configure monthly dollar limits and per-tool costs. Budgets reset automatically on the 1st of each month.</p>
+
+              <div style="display:flex; align-items:end; gap:16px; margin-bottom:24px; padding:16px; background:var(--bg-input); border-radius:var(--radius-sm);">
+                <div class="form-group" style="margin-bottom:0; flex:0 0 200px;">
+                  <label class="form-label">Default Monthly $ Budget</label>
+                  <input type="number" class="form-input" id="saDefaultMonthlyCredits" value="100" min="1" max="10000" style="font-weight:700; font-size:1.1rem;">
+                </div>
+                <div style="flex:1; color:var(--text-muted); font-size:0.85rem;">
+                  <i class="fas fa-info-circle"></i> This is the default monthly dollar limit for new users. Individual limits can be overridden in the user table below.
+                </div>
+              </div>
+
+              <h5 style="margin-bottom:12px; color:var(--text-secondary);">Per-Tool Dollar Costs</h5>
+              <div id="saCreditCostTable" style="margin-bottom:16px;">
+                <div class="results-loading"><div class="loading-spinner"></div><br>Loading dollar budget configuration...</div>
+              </div>
+
+              <button class="btn btn-primary" onclick="saveCreditConfig()"><i class="fas fa-save"></i> Save Dollar Configuration</button>
+              <div id="saCreditConfigResult" style="margin-top:12px;"></div>
+            </div>
+
+            <!-- Existing Users -->
+            <div class="chart-card" style="grid-column:span 2;">
+              <div class="chart-card-header">
+                <h4><i class="fas fa-users" style="color:var(--accent-green);"></i> All Users</h4>
+                <button class="btn btn-sm btn-outline" onclick="loadUserList()"><i class="fas fa-refresh"></i> Refresh</button>
+              </div>
+              <div id="saUserList">
+                <div class="results-empty">Loading users...</div>
+              </div>
+            </div>
+
+            <!-- Failed Attempts -->
+            <div class="chart-card" style="grid-column:span 2; border-color:var(--accent-red);">
+              <div class="chart-card-header">
+                <h4><i class="fas fa-triangle-exclamation" style="color:var(--accent-red);"></i> Failed Tool Attempts (Insufficient Funds)</h4>
+                <button class="btn btn-sm btn-outline" onclick="loadFailedAttempts()"><i class="fas fa-refresh"></i> Refresh</button>
+              </div>
+              <div id="saFailedAttempts">
+                <div class="results-empty">Loading failed attempts...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/seo-engine.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/charts.js"></script>
+</body>
+</html>
