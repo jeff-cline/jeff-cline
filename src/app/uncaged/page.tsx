@@ -1,126 +1,55 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-const BAR_COUNT = 32;
+const BAR_COUNT = 36;
 
 export default function UncagedPage() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(1.2);
-  const [bars, setBars] = useState<number[]>(Array.from({ length: BAR_COUNT }, () => 12));
-
   const audioRef = useRef<HTMLAudioElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const gainRef = useRef<GainNode | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const rafRef = useRef<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [tick, setTick] = useState(0);
 
-  const stopVisualizer = () => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-  };
+  const bars = useMemo(() => {
+    const base = isPlaying ? 26 : 10;
+    return Array.from({ length: BAR_COUNT }, (_, i) => {
+      const wave = Math.sin((tick / 5) + i * 0.55);
+      const pulse = Math.sin((tick / 9) + i * 0.23);
+      const lift = isPlaying ? Math.max(0, wave) * 48 + (pulse + 1) * 10 : Math.max(0, wave) * 8;
+      return Math.min(96, base + lift);
+    });
+  }, [isPlaying, tick]);
 
-  const animateVisualizer = () => {
-    const analyser = analyserRef.current;
-    if (!analyser) return;
+  useEffect(() => {
+    if (!isPlaying) return;
+    const id = window.setInterval(() => setTick((v) => v + 1), 70);
+    return () => window.clearInterval(id);
+  }, [isPlaying]);
 
-    const data = new Uint8Array(analyser.frequencyBinCount);
-
-    const tick = () => {
-      analyser.getByteFrequencyData(data);
-
-      const nextBars = Array.from({ length: BAR_COUNT }, (_, i) => {
-        const index = Math.min(data.length - 1, Math.floor((i / BAR_COUNT) * data.length));
-        const value = data[index] ?? 0;
-        const normalized = value / 255;
-        return 10 + normalized * 90;
-      });
-
-      setBars(nextBars);
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    tick();
-  };
-
-  const ensureAudioGraph = async () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (!audioContextRef.current) {
-      const context = new window.AudioContext();
-      const source = context.createMediaElementSource(audio);
-      const analyser = context.createAnalyser();
-      const gain = context.createGain();
-
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.82;
-      gain.gain.value = volume;
-
-      source.connect(analyser);
-      analyser.connect(gain);
-      gain.connect(context.destination);
-
-      audioContextRef.current = context;
-      sourceRef.current = source;
-      analyserRef.current = analyser;
-      gainRef.current = gain;
-      return;
-    }
-
-    if (audioContextRef.current.state === "suspended") {
-      await audioContextRef.current.resume();
-    }
-  };
-
-  const handlePlayToggle = async () => {
+  const toggleAudio = async () => {
     const audio = audioRef.current;
     if (!audio) return;
 
     if (isPlaying) {
       audio.pause();
       setIsPlaying(false);
-      stopVisualizer();
       return;
     }
 
     try {
-      await ensureAudioGraph();
       await audio.play();
       setIsPlaying(true);
-      animateVisualizer();
     } catch {
       setIsPlaying(false);
-      stopVisualizer();
     }
   };
 
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
-    if (gainRef.current) {
-      gainRef.current.gain.value = newVolume;
-    }
-    if (audioRef.current) {
-      audioRef.current.volume = Math.min(newVolume, 1);
-    }
+  const onVolumeChange = (next: number) => {
+    const audio = audioRef.current;
+    setVolume(next);
+    if (audio) audio.volume = next;
   };
-
-  useEffect(() => {
-    if (gainRef.current) {
-      gainRef.current.gain.value = volume;
-    }
-
-    return () => {
-      stopVisualizer();
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(() => undefined);
-      }
-    };
-  }, [volume]);
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#041019] text-white">
@@ -148,13 +77,13 @@ export default function UncagedPage() {
               priority
             />
 
-            <div className={`visualizer-wrap ${isPlaying ? "active" : ""}`}>
+            <div className="visualizer-wrap">
               <div className="visualizer-overlay" />
               <div className="visualizer-grid" aria-hidden="true">
                 {bars.map((height, idx) => (
                   <span
                     key={idx}
-                    className="viz-bar"
+                    className={`viz-bar ${isPlaying ? "active" : ""}`}
                     style={{ height: `${height}%`, animationDelay: `${idx * 0.03}s` }}
                   />
                 ))}
@@ -163,7 +92,7 @@ export default function UncagedPage() {
 
             <button
               type="button"
-              onClick={handlePlayToggle}
+              onClick={toggleAudio}
               className="absolute left-1/2 top-[43%] flex h-24 w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-orange-100/70 bg-orange-500/55 text-3xl text-white transition hover:scale-105 hover:bg-orange-500/75 focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50"
               aria-label={isPlaying ? "Pause audio" : "Play audio"}
             >
@@ -178,10 +107,10 @@ export default function UncagedPage() {
               <input
                 type="range"
                 min={0}
-                max={2}
+                max={1}
                 step={0.01}
                 value={volume}
-                onChange={(event) => handleVolumeChange(Number(event.target.value))}
+                onChange={(event) => onVolumeChange(Number(event.target.value))}
                 aria-label="Audio volume"
                 className="w-full accent-orange-400"
               />
@@ -191,15 +120,10 @@ export default function UncagedPage() {
           <audio
             ref={audioRef}
             src="/decks/roatan-video.mp4"
-            onEnded={() => {
-              setIsPlaying(false);
-              stopVisualizer();
-            }}
-            onPause={() => {
-              setIsPlaying(false);
-              stopVisualizer();
-            }}
             preload="auto"
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onEnded={() => setIsPlaying(false)}
             className="hidden"
           />
 
@@ -265,12 +189,7 @@ export default function UncagedPage() {
           left: 0;
           right: 0;
           bottom: 0;
-          height: 28%;
-          opacity: 0.5;
-          transition: opacity 220ms ease;
-        }
-
-        .visualizer-wrap.active {
+          height: 30%;
           opacity: 1;
         }
 
@@ -294,7 +213,13 @@ export default function UncagedPage() {
           min-height: 8%;
           background: linear-gradient(180deg, rgba(30, 209, 211, 0.95), rgba(255, 139, 59, 0.9));
           box-shadow: 0 0 12px rgba(13, 203, 198, 0.55), 0 0 16px rgba(255, 129, 58, 0.35);
-          animation: sway 1.15s ease-in-out infinite;
+          animation: breathe 1.6s ease-in-out infinite;
+          opacity: 0.7;
+        }
+
+        .viz-bar.active {
+          animation: sway 0.9s ease-in-out infinite;
+          opacity: 1;
         }
 
         @keyframes driftA {
@@ -345,7 +270,17 @@ export default function UncagedPage() {
             transform: translateY(0);
           }
           50% {
-            transform: translateY(-3px);
+            transform: translateY(-5px);
+          }
+        }
+
+        @keyframes breathe {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-1px);
           }
         }
       `}</style>
