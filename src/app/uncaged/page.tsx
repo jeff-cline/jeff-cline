@@ -1,10 +1,29 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export default function UncagedPage() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const handlePlayToggle = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch {
+      setIsPlaying(false);
+    }
+  };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#041019] text-white">
@@ -34,37 +53,27 @@ export default function UncagedPage() {
 
             <button
               type="button"
-              onClick={() => setIsPlaying(true)}
+              onClick={handlePlayToggle}
               className="absolute left-1/2 top-1/2 flex h-24 w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-orange-100/60 bg-orange-500/45 text-3xl text-white transition hover:scale-105 hover:bg-orange-500/65 focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-300/50"
-              aria-label="Play video"
+              aria-label={isPlaying ? "Pause audio" : "Play audio"}
             >
-              ▶
+              {isPlaying ? "⏸" : "▶"}
             </button>
           </div>
+
+          <audio
+            ref={audioRef}
+            src="/decks/roatan-video.mp4"
+            onEnded={() => setIsPlaying(false)}
+            preload="metadata"
+            className="hidden"
+          />
 
           <p className="mt-6 text-center text-sm text-teal-100/80 md:text-base">
             EVERY INDUSTRY IS A GEEK AWAY FROM BEING UBERIZED.
           </p>
         </div>
       </section>
-
-      {isPlaying && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4">
-          <button
-            type="button"
-            onClick={() => setIsPlaying(false)}
-            className="absolute right-4 top-4 rounded-lg border border-white/30 bg-black/40 px-3 py-1 text-sm text-white hover:bg-black/70"
-          >
-            Close
-          </button>
-          <video
-            src="/decks/roatan-video.mp4"
-            controls
-            autoPlay
-            className="max-h-[90vh] w-full max-w-5xl rounded-2xl border border-orange-200/30 shadow-2xl"
-          />
-        </div>
-      )}
 
       <style jsx>{`
         .wave {
