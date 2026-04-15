@@ -8,7 +8,6 @@ const BAR_COUNT = 36;
 export default function UncagedPage() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(1);
   const [tick, setTick] = useState(0);
 
   const bars = useMemo(() => {
@@ -43,12 +42,6 @@ export default function UncagedPage() {
     } catch {
       setIsPlaying(false);
     }
-  };
-
-  const onVolumeChange = (next: number) => {
-    const audio = audioRef.current;
-    setVolume(next);
-    if (audio) audio.volume = next;
   };
 
   return (
@@ -99,22 +92,7 @@ export default function UncagedPage() {
               {isPlaying ? "⏸" : "▶"}
             </button>
 
-            <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-teal-200/35 bg-[#05111ddd] p-3 backdrop-blur-md md:p-4">
-              <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-teal-100/85 md:text-sm">
-                <span>{isPlaying ? "Now Playing" : "Ready to Play"}</span>
-                <span className="text-orange-200">Volume {(volume * 100).toFixed(0)}%</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                onChange={(event) => onVolumeChange(Number(event.target.value))}
-                aria-label="Audio volume"
-                className="w-full accent-orange-400"
-              />
-            </div>
+
           </div>
 
           <audio
