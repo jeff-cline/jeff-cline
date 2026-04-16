@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { silos } from "@/lib/silo-data";
 
-const HIDDEN_PATHS = ["/mastermind", "/roatan"];
+const HIDDEN_PATHS = ["/mastermind", "/roatan", "/colab"];
 
 export default function Footer() {
   const pathname = usePathname();

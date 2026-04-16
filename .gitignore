@@ -40,8 +40,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Large media kept out of git
-public/decks/roatan-video.mp4
 public/decks/investor-discovery-tour-caribbean.pdf
-
-.superpowers/
+public/decks/roatan-video.mp4

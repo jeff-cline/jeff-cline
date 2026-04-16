@@ -12,7 +12,7 @@ const silos = [
   { name: "Family Offices", href: "/family-offices" },
 ];
 
-const HIDDEN_PATHS = ["/mastermind", "/roatan"];
+const HIDDEN_PATHS = ["/mastermind", "/roatan", "/colab"];
 
 export default function Header() {
   const pathname = usePathname();
