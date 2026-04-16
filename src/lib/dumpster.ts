@@ -13,6 +13,7 @@ export const FRAME_STYLES = ["solid", "dashed", "dotted", "double"] as const;
 export type FrameStyle = (typeof FRAME_STYLES)[number];
 
 export const ROLES = [
+  "superadmin",
   "admin",
   "coordinator",
   "executive_assistant",
@@ -25,6 +26,7 @@ export const ROLES = [
 export type Role = (typeof ROLES)[number];
 
 export const ROLE_LABELS: Record<Role, string> = {
+  superadmin: "Super Admin",
   admin: "Admin",
   coordinator: "Coordinator",
   executive_assistant: "Executive Assistant",
@@ -35,14 +37,14 @@ export const ROLE_LABELS: Record<Role, string> = {
   user: "Contributor",
 };
 
-export const TRIAGE_ROLES: Role[] = ["admin", "coordinator", "executive_assistant"];
+export const TRIAGE_ROLES: Role[] = ["superadmin", "admin", "coordinator", "executive_assistant"];
 
 export function canTriage(role?: string | null): boolean {
   return TRIAGE_ROLES.includes((role || "user") as Role);
 }
 
 export function canManageCompanies(role?: string | null): boolean {
-  return role === "admin" || role === "coordinator";
+  return role === "superadmin" || role === "admin" || role === "coordinator";
 }
 
 export interface DumpsterSeed {

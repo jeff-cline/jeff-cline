@@ -56,8 +56,8 @@ export default function DumpsterPage() {
   const [drawer, setDrawer] = useState<Seed | null>(null);
 
   const role = ((session?.user as any)?.role || "user") as Role;
-  const canTriage = role === "admin" || role === "coordinator" || role === "executive_assistant";
-  const canManageCompanies = role === "admin" || role === "coordinator";
+  const canTriage = role === "superadmin" || role === "admin" || role === "coordinator" || role === "executive_assistant";
+  const canManageCompanies = role === "superadmin" || role === "admin" || role === "coordinator";
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login?callbackUrl=/dumpster");
