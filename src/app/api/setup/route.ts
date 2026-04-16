@@ -5,9 +5,9 @@ import { getDb } from "@/lib/mongodb";
 // POST: Seed the initial super admin account (only if none exists)
 export async function POST() {
   try {
-    const email = process.env.SUPERADMIN_EMAIL?.trim();
-    const password = process.env.SUPERADMIN_PASSWORD?.trim();
-    const name = (process.env.SUPERADMIN_NAME || "Super Admin").trim();
+    const email = (process.env.SUPERADMIN_EMAIL || process.env.BOOTSTRAP_ADMIN_EMAIL)?.trim();
+    const password = (process.env.SUPERADMIN_PASSWORD || process.env.BOOTSTRAP_ADMIN_PASSWORD)?.trim();
+    const name = (process.env.SUPERADMIN_NAME || process.env.BOOTSTRAP_ADMIN_NAME || "Super Admin").trim();
 
     if (!email || !password) {
       return NextResponse.json(

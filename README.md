@@ -34,3 +34,45 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Admin bootstrap & credential recovery (production-safe)
+
+This project includes an idempotent endpoint at:
+
+- `GET /api/bootstrap-admin?secret=...`
+- `POST /api/bootstrap-admin` with `{ "secret": "..." }`
+
+Use it to create or reset the login account used by `/login` (NextAuth credentials).
+
+### Required environment variables
+
+Set these in Vercel (Production):
+
+- `BOOTSTRAP_SECRET` (required)
+- `BOOTSTRAP_ADMIN_EMAIL` (required)
+- `BOOTSTRAP_ADMIN_PASSWORD` (required)
+- `BOOTSTRAP_ADMIN_NAME` (optional)
+
+Compatibility fallback is supported for legacy names:
+
+- `SUPERADMIN_EMAIL`
+- `SUPERADMIN_PASSWORD`
+- `SUPERADMIN_NAME`
+
+### Runbook
+
+1. Add/update env vars in Vercel.
+2. Redeploy production.
+3. Hit:
+   - `https://jeff-cline.com/api/bootstrap-admin?secret=YOUR_BOOTSTRAP_SECRET`
+4. Expect one of:
+   - `{ "ok": true, "action": "created", ... }`
+   - `{ "ok": true, "action": "updated", ... }`
+   - `{ "ok": true, "action": "unchanged", ... }`
+5. Log in via `/login` with `BOOTSTRAP_ADMIN_EMAIL` + `BOOTSTRAP_ADMIN_PASSWORD`.
+
+### Notes
+
+- Endpoint returns `401` when `secret` is missing/wrong.
+- Endpoint is safe to run multiple times.
+- Do not expose `BOOTSTRAP_SECRET` publicly.
