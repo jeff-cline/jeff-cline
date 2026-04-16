@@ -1,15 +1,26 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getDb } from "@/lib/mongodb";
 
-export async function POST() {
+async function run(req: NextRequest) {
   const email = (process.env.BOOTSTRAP_ADMIN_EMAIL || "").toLowerCase();
   const password = process.env.BOOTSTRAP_ADMIN_PASSWORD || "";
-  if (!email || !password) {
+  const secret = process.env.BOOTSTRAP_SECRET || "";
+
+  if (!email || !password || !secret) {
     return NextResponse.json(
-      { error: "Set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD env vars" },
+      { error: "Set BOOTSTRAP_ADMIN_EMAIL, BOOTSTRAP_ADMIN_PASSWORD, and BOOTSTRAP_SECRET env vars" },
       { status: 400 }
     );
+  }
+
+  const url = new URL(req.url);
+  const providedSecret =
+    url.searchParams.get("secret") ||
+    req.headers.get("x-bootstrap-secret") ||
+    "";
+  if (providedSecret !== secret) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const db = await getDb();
@@ -34,3 +45,6 @@ export async function POST() {
   });
   return NextResponse.json({ ok: true, action: "created", email });
 }
+
+export async function POST(req: NextRequest) { return run(req); }
+export async function GET(req: NextRequest) { return run(req); }

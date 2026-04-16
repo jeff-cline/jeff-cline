@@ -1,0 +1,80 @@
+<h2>Three Boards — Does This Shape Work?</h2>
+<p class="subtitle">Click a board to "drill in" — tells me which one matters most to get right first</p>
+
+<div class="cards" data-multiselect>
+
+  <div class="card" data-choice="intake" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0e1116;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="background:#1a2030;border:2px dashed #4a6cf7;border-radius:12px;padding:24px;text-align:center;color:#aac;">
+          📷 Tap to snap
+        </div>
+        <div style="background:#1a2030;border:2px dashed #4a6cf7;border-radius:12px;padding:16px;text-align:center;color:#aac;">
+          🎙️ Voice memo
+        </div>
+        <div style="background:#1a2030;border:2px dashed #4a6cf7;border-radius:12px;padding:16px;text-align:center;color:#aac;">
+          📝 Quick note
+        </div>
+        <div style="background:#1a2030;border:2px dashed #4a6cf7;border-radius:12px;padding:12px;text-align:center;color:#aac;font-size:12px;">
+          📎 Upload file
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>1. Your Lane (intake)</h3>
+      <p>The <b>only</b> screen you see on your phone. One-tap capture. Everything you drop lands in "Raw Seeds" for the team.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="triage" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0e1116;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:10px;">
+        <div>
+          <div style="color:#888;margin-bottom:4px;">RAW</div>
+          <div style="background:#ff6b6b22;border:2px solid #ff6b6b;border-radius:6px;padding:8px;margin-bottom:4px;">📷 napkin</div>
+          <div style="background:#ffd93d22;border:2px dashed #ffd93d;border-radius:6px;padding:8px;margin-bottom:4px;">🎙️ voice</div>
+          <div style="background:#6bcf7f22;border:2px dotted #6bcf7f;border-radius:6px;padding:8px;">📝 note</div>
+        </div>
+        <div>
+          <div style="color:#888;margin-bottom:4px;">SORTING</div>
+          <div style="background:#4a6cf722;border:2px solid #4a6cf7;border-radius:6px;padding:8px;margin-bottom:4px;">📎 deck</div>
+          <div style="background:#4a6cf722;border:2px dashed #4a6cf7;border-radius:6px;padding:8px;">💰 deal</div>
+        </div>
+        <div>
+          <div style="color:#888;margin-bottom:4px;">ROUTED →</div>
+          <div style="background:#a78bfa22;border:2px solid #a78bfa;border-radius:6px;padding:8px;margin-bottom:4px;">HITT</div>
+          <div style="background:#f472b622;border:2px double #f472b6;border-radius:6px;padding:8px;">Roatan</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>2. Triage Board (team)</h3>
+      <p>Coordinators see every raw seed. AI pre-tags ("looks like HITT deal flow?"). Drag to a company/project. Color = priority, frame = company.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="company" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0e1116;">
+      <div style="font-size:10px;">
+        <div style="color:#a78bfa;font-weight:bold;margin-bottom:6px;">▸ HITT</div>
+        <div style="padding-left:10px;">
+          <div style="color:#888;margin-bottom:4px;">→ Deal Flow</div>
+          <div style="background:#a78bfa22;border:2px solid #a78bfa;border-radius:6px;padding:6px;margin-bottom:3px;">🔴 Lead: Acme <span style="float:right;">$50k</span></div>
+          <div style="background:#a78bfa22;border:2px solid #a78bfa;border-radius:6px;padding:6px;margin-bottom:3px;">🟡 Lead: Zeta <span style="float:right;">$12k</span></div>
+          <div style="color:#888;margin:6px 0 4px;">→ Ops</div>
+          <div style="background:#a78bfa22;border:2px dashed #a78bfa;border-radius:6px;padding:6px;margin-bottom:3px;">🟢 Hire COO</div>
+          <div style="background:#a78bfa22;border:2px dashed #a78bfa;border-radius:6px;padding:6px;">🔵 Q2 budget</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>3. Company / Project Board</h3>
+      <p>Drill-down per company. Priority dot (🔴🟡🟢🔵), frame style = which company, threads under each card, $ tracked, JV links to other companies.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px;">
+  <b>Question:</b> Does this three-board shape match your mental model? If yes, pick the board you want to get <b>visually perfect first</b> (or say "looks right, keep going").
+</p>
