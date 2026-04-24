@@ -58,9 +58,24 @@ jobs:
           set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo "$DEPLOY_SSH_KEY" | base64 -d > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          echo "key fingerprint:"; ssh-keygen -l -f ~/.ssh/id_ed25519 || { echo "FATAL: DEPLOY_SSH_KEY is malformed (expected base64-encoded OpenSSH private key)"; exit 1; }
+          KEY_FILE=~/.ssh/id_ed25519
+
+          if printf '%s' "$DEPLOY_SSH_KEY" | grep -q 'BEGIN OPENSSH PRIVATE KEY'; then
+            echo "detected PEM format"
+            printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$KEY_FILE"
+          else
+            echo "assuming base64 format"
+            printf '%s' "$DEPLOY_SSH_KEY" | tr -d ' \t\r\n' | base64 -d > "$KEY_FILE" || {
+              echo "FATAL: DEPLOY_SSH_KEY is neither valid PEM nor base64"
+              echo "key length (chars): ${#DEPLOY_SSH_KEY}"
+              echo "first 20 chars: $(printf '%s' "$DEPLOY_SSH_KEY" | head -c 20)"
+              exit 1
+            }
+          fi
+
+          chmod 600 "$KEY_FILE"
+          echo "key size: $(wc -c < "$KEY_FILE") bytes"
+          echo "key fingerprint:"; ssh-keygen -l -f "$KEY_FILE" || { echo "FATAL: key file failed ssh-keygen validation"; head -1 "$KEY_FILE"; exit 1; }
           echo "scanning host key for $DEPLOY_HOST"
           ssh-keyscan -t ed25519 -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
