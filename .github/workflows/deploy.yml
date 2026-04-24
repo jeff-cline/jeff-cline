@@ -52,14 +52,21 @@ jobs:
           ls -la deploy-bundle | head -20
 
       - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          echo "key fingerprint:"; ssh-keygen -l -f ~/.ssh/id_ed25519 || { echo "FATAL: DEPLOY_SSH_KEY is malformed"; exit 1; }
+          echo "scanning host key for $DEPLOY_HOST"
           ssh-keyscan -t ed25519 -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
+          echo "testing SSH connection"
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o BatchMode=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" "echo ssh-ok && whoami && hostname"
 
       - name: Rsync to VPS
         run: |
@@ -67,13 +74,13 @@ jobs:
           rsync -az --delete \
             --exclude '.git' \
             --exclude '.env*' \
-            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o BatchMode=yes" \
             ./deploy-bundle/ \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
 
       - name: Restart service
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes \
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o BatchMode=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "sudo -n /usr/bin/systemctl restart $SERVICE_NAME && sudo -n /usr/bin/systemctl status $SERVICE_NAME"
