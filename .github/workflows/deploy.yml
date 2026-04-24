@@ -58,9 +58,9 @@ jobs:
           set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+          echo "$DEPLOY_SSH_KEY" | base64 -d > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          echo "key fingerprint:"; ssh-keygen -l -f ~/.ssh/id_ed25519 || { echo "FATAL: DEPLOY_SSH_KEY is malformed"; exit 1; }
+          echo "key fingerprint:"; ssh-keygen -l -f ~/.ssh/id_ed25519 || { echo "FATAL: DEPLOY_SSH_KEY is malformed (expected base64-encoded OpenSSH private key)"; exit 1; }
           echo "scanning host key for $DEPLOY_HOST"
           ssh-keyscan -t ed25519 -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
