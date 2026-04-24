@@ -1,0 +1,79 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: /var/www/jeff-cline
+      SERVICE_NAME: jeff-cline
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXTAUTH_SECRET: build-time-placeholder
+          NEXTAUTH_URL: https://jeff-cline.com
+          MONGODB_URI: mongodb://placeholder/jeff-cline
+
+      - name: Stage standalone bundle
+        run: |
+          set -euo pipefail
+          mkdir -p deploy-bundle
+          cp -a .next/standalone/. deploy-bundle/
+          mkdir -p deploy-bundle/.next
+          cp -a .next/static deploy-bundle/.next/static
+          if [ -d public ]; then
+            cp -a public deploy-bundle/public
+          fi
+          ls -la deploy-bundle | head -20
+
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Rsync to VPS
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            --exclude '.git' \
+            --exclude '.env*' \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes" \
+            ./deploy-bundle/ \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+
+      - name: Restart service
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "sudo -n /usr/bin/systemctl restart $SERVICE_NAME && sudo -n /usr/bin/systemctl status $SERVICE_NAME"
