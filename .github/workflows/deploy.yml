@@ -51,36 +51,20 @@ jobs:
           fi
           ls -la deploy-bundle | head -20
 
-      - name: Configure SSH
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add VPS to known hosts
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          KEY_FILE=~/.ssh/id_ed25519
-
-          if printf '%s' "$DEPLOY_SSH_KEY" | grep -q 'BEGIN OPENSSH PRIVATE KEY'; then
-            echo "detected PEM format"
-            printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$KEY_FILE"
-          else
-            echo "assuming base64 format"
-            printf '%s' "$DEPLOY_SSH_KEY" | tr -d ' \t\r\n' | base64 -d > "$KEY_FILE" || {
-              echo "FATAL: DEPLOY_SSH_KEY is neither valid PEM nor base64"
-              echo "key length (chars): ${#DEPLOY_SSH_KEY}"
-              echo "first 20 chars: $(printf '%s' "$DEPLOY_SSH_KEY" | head -c 20)"
-              exit 1
-            }
-          fi
-
-          chmod 600 "$KEY_FILE"
-          echo "key size: $(wc -c < "$KEY_FILE") bytes"
-          echo "key fingerprint:"; ssh-keygen -l -f "$KEY_FILE" || { echo "FATAL: key file failed ssh-keygen validation"; head -1 "$KEY_FILE"; exit 1; }
-          echo "scanning host key for $DEPLOY_HOST"
           ssh-keyscan -t ed25519 -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
           echo "testing SSH connection"
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o BatchMode=yes \
+          ssh -o StrictHostKeyChecking=yes -o BatchMode=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" "echo ssh-ok && whoami && hostname"
 
       - name: Rsync to VPS
@@ -89,13 +73,13 @@ jobs:
           rsync -az --delete \
             --exclude '.git' \
             --exclude '.env*' \
-            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o BatchMode=yes" \
+            -e "ssh -o StrictHostKeyChecking=yes -o BatchMode=yes" \
             ./deploy-bundle/ \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
 
       - name: Restart service
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -o BatchMode=yes \
+          ssh -o StrictHostKeyChecking=yes -o BatchMode=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "sudo -n /usr/bin/systemctl restart $SERVICE_NAME && sudo -n /usr/bin/systemctl status $SERVICE_NAME"
