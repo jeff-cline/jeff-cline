@@ -103,6 +103,9 @@ export default function Footer() {
             <Link href="/testimonials" className="text-gray-500 text-sm hover:text-[#FF8900] transition-colors">
               Referrals &amp; Testimonials
             </Link>
+            <Link href="/jeff-cline-in-the-news" className="text-gray-500 text-sm hover:text-[#FF8900] transition-colors">
+              Jeff Cline in the News
+            </Link>
             <Link href="/mastermind" className="text-gray-500 text-sm hover:text-[#FF8900] transition-colors font-semibold">
               Immersive Mastermind
             </Link>

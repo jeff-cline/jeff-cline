@@ -56,6 +56,9 @@ export default function Header() {
             <Link href="/tools" className="text-sm font-semibold text-gray-300 hover:text-[#FF8900] transition-colors">
               Tools
             </Link>
+            <Link href="/jeff-cline-in-the-news" className="text-sm font-semibold text-gray-300 hover:text-[#FF8900] transition-colors">
+              As Seen on TV
+            </Link>
             {session ? (
               <div className="flex items-center gap-3">
                 <Link href="/dashboard" className="text-sm font-semibold text-gray-300 hover:text-[#FF8900] transition-colors">
@@ -139,6 +142,10 @@ export default function Header() {
             <Link href="/resources" onClick={() => setOpen(false)}
               className="block text-sm font-semibold text-gray-300 hover:text-[#FF8900] transition-colors">
               Resources
+            </Link>
+            <Link href="/jeff-cline-in-the-news" onClick={() => setOpen(false)}
+              className="block text-sm font-semibold text-gray-300 hover:text-[#FF8900] transition-colors">
+              As Seen on TV
             </Link>
             {session ? (
               <>
