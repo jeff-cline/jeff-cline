@@ -1,5 +1,14 @@
 name: Deploy to VPS
 
+# Deploys jeff-cline.com by building ON the server (the way it actually runs):
+# git checkout at /var/www/jeff-cline, built there, served by the `jeff-cline`
+# pm2 app (Next server on :3090) behind nginx. This box is SHARED with other
+# sites/pm2 apps (hernextmission, attorney, spurrt, vrtcls) — this workflow
+# only touches /var/www/jeff-cline and only restarts the `jeff-cline` app.
+#
+# Requires repo secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY (private key
+# whose public half is in the server user's ~/.ssh/authorized_keys).
+
 on:
   push:
     branches: [main]
@@ -16,41 +25,7 @@ jobs:
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-      DEPLOY_PATH: /var/www/jeff-cline
-      SERVICE_NAME: jeff-cline
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-        env:
-          NEXTAUTH_SECRET: build-time-placeholder
-          NEXTAUTH_URL: https://jeff-cline.com
-          MONGODB_URI: mongodb://placeholder/jeff-cline
-
-      - name: Stage standalone bundle
-        run: |
-          set -euo pipefail
-          mkdir -p deploy-bundle
-          cp -a .next/standalone/. deploy-bundle/
-          mkdir -p deploy-bundle/.next
-          cp -a .next/static deploy-bundle/.next/static
-          if [ -d public ]; then
-            cp -a public deploy-bundle/public
-          fi
-          ls -la deploy-bundle | head -20
-
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -59,27 +34,42 @@ jobs:
       - name: Add VPS to known hosts
         run: |
           set -euo pipefail
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
           ssh-keyscan -t ed25519 -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
-          echo "testing SSH connection"
-          ssh -o StrictHostKeyChecking=yes -o BatchMode=yes \
-            "$DEPLOY_USER@$DEPLOY_HOST" "echo ssh-ok && whoami && hostname"
 
-      - name: Rsync to VPS
+      - name: Deploy (pull + build + pm2 restart on server)
         run: |
           set -euo pipefail
-          rsync -az --delete \
-            --exclude '.git' \
-            --exclude '.env*' \
-            -e "ssh -o StrictHostKeyChecking=yes -o BatchMode=yes" \
-            ./deploy-bundle/ \
-            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+          ssh -o StrictHostKeyChecking=yes -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE'
+            set -euo pipefail
+            cd /var/www/jeff-cline
 
-      - name: Restart service
-        run: |
-          set -euo pipefail
-          ssh -o StrictHostKeyChecking=yes -o BatchMode=yes \
-            "$DEPLOY_USER@$DEPLOY_HOST" \
-            "sudo -n /usr/bin/systemctl restart $SERVICE_NAME && sudo -n /usr/bin/systemctl status $SERVICE_NAME"
+            echo "==> before: $(git rev-parse --short HEAD)"
+            # Treat the server checkout as a mirror of origin/main. .env / .env.local
+            # and node_modules are gitignored, so they are never touched by this.
+            git fetch origin main --prune
+            git reset --hard origin/main
+            echo "==> after:  $(git rev-parse --short HEAD)"
+
+            # Install deps (reproducible) and build on the server (correct arch).
+            npm ci --no-audit --no-fund
+            npm run build
+
+            # Restart ONLY the jeff-cline pm2 app (leaves other sites alone).
+            pm2 restart jeff-cline --update-env
+            pm2 save
+
+            echo "==> pm2 status:"
+            pm2 describe jeff-cline | grep -E "status|restart time|pid" | head -3 || true
+
+            echo "==> local health check on :3090"
+            for i in 1 2 3 4 5; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3090/ || echo 000)
+              echo "   attempt $i -> $code"
+              [ "$code" = "200" ] && break
+              sleep 2
+            done
+            [ "${code:-000}" = "200" ] || { echo "Health check failed (home not 200)"; exit 1; }
+            echo "==> deploy OK"
+          REMOTE
