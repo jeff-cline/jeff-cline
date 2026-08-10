@@ -37,10 +37,10 @@ export default function ContactPage() {
             <div className="text-4xl mb-4">📞</div>
             <h2 className="text-xl font-bold text-white mb-2">Call or Text</h2>
             <a
-              href="tel:2234008146"
+              href="tel:9728006670"
               className="text-2xl font-black text-[#FF8900] hover:text-[#DC2626] transition-colors"
             >
-              223-400-8146
+              972-800-6670
             </a>
           </div>
 
