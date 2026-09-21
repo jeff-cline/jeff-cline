@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     "Jeff Cline helps businesses, entrepreneurs, start-ups, investors, and family offices weaponize technology to dominate their markets. Predictive analytics, AI, and proprietary systems that print profit at scale.",
   openGraph: {
     title: "Jeff Cline — PROFIT AT SCALE",
-    description: "Every Industry is ONE GEEK away from being UBERIZED. Technology disruption for profit.",
+    description: "Jeff Cline helps businesses, entrepreneurs, start-ups, investors, and family offices weaponize technology to dominate their markets — every industry is one GEEK away from being UBERIZED.",
     url: "https://jeff-cline.com",
     siteName: "Jeff Cline",
     type: "website",
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Jeff Cline — PROFIT AT SCALE",
-    description: "Every Industry is ONE GEEK away from being UBERIZED.",
+    description: "Jeff Cline helps businesses, entrepreneurs, investors, and family offices weaponize technology to dominate their markets. Every industry is one GEEK away from being UBERIZED.",
     images: ["/jeff-cline-og.jpg"],
   },
 };
