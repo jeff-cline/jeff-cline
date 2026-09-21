@@ -16,12 +16,13 @@ export const metadata: Metadata = {
     url: "https://jeff-cline.com",
     siteName: "Jeff Cline",
     type: "website",
-    images: [{ url: "/favicon-192x192.png", width: 192, height: 192, alt: "Jeff Cline" }],
+    images: [{ url: "/jeff-cline-og.jpg", width: 1200, height: 630, alt: "Jeff Cline — PROFIT AT SCALE" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Jeff Cline | PROFIT AT SCALE",
     description: "Every Industry is ONE GEEK away from being UBERIZED.",
+    images: ["/jeff-cline-og.jpg"],
   },
   icons: {
     icon: [
@@ -48,15 +49,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "@type": "Person",
               name: "Jeff Cline",
               url: "https://jeff-cline.com",
+              image: "https://jeff-cline.com/jeff-cline.jpg",
               jobTitle: "Technology Strategist & Business Disruptor",
               description: "30+ years of enterprise technology leadership. Helping businesses, entrepreneurs, start-ups, investors, and family offices achieve PROFIT AT SCALE through technology disruption.",
               knowsAbout: ["Business Strategy", "Technology Disruption", "Startups", "Investment Strategy", "Family Offices", "AI Integration", "Digital Transformation", "Scalable Equity Technology"],
+              alumniOf: { "@type": "CollegeOrUniversity", name: "Colorado State University" },
               worksFor: {
                 "@type": "Organization",
                 name: "VRTCLS",
                 url: "https://vrtcls.com",
               },
-              sameAs: ["https://jeff-cline.com"],
+              sameAs: [
+                "https://www.linkedin.com/in/jeff-cline/",
+                "https://www.crunchbase.com/person/jeff-cline-b398",
+                "https://r0cketship.com",
+                "https://vrtcls.com",
+              ],
             }),
           }}
         />
