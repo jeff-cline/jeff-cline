@@ -12,11 +12,13 @@ export const metadata: Metadata = {
     url: "https://jeff-cline.com",
     siteName: "Jeff Cline",
     type: "website",
+    images: [{ url: "/jeff-cline-og.jpg", width: 1200, height: 630, alt: "Jeff Cline — PROFIT AT SCALE" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Jeff Cline — PROFIT AT SCALE",
     description: "Every Industry is ONE GEEK away from being UBERIZED.",
+    images: ["/jeff-cline-og.jpg"],
   },
 };
 
